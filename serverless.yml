@@ -97,7 +97,7 @@ plugins:
 
 functions:
   hello:
-    handler: handler.hello
+    handler: handler.queueMessage
     events:
       - http:
           path: /hello

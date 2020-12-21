@@ -13,58 +13,157 @@ var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
 
 const QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/MyQueue`;
 
-exports.hello = async function(event,context,callback) {
-  const params = {
-		MessageBody: "Shalom",
-		QueueUrl: QUEUE_URL
-	};
-
-  sqs.sendMessage(params, function(err, data) {
-		if (err) {
-			console.log('error:', 'Fail Send Message' + err);
-
-			const response = {
-				statusCode: 500,
-				body: JSON.stringify({
-					message: 'ERROR'
-				})
-			};
-
-			callback(null, response);
-		} else {
-			console.log('data:', data.MessageId);
-
-			const response = {
-				statusCode: 200,
-				body: JSON.stringify({
-					message: data.MessageId
-				})
-			};
-
-			callback(null, response);
-		}
-	});
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify(
-      {
-        message: 'Go Serverless v1.0! Your function executed successfully!',
-        input: event,
-      },
-      null,
-      2
-    ),
-  };
-
-  // Use this code if you don't use the http event with the LAMBDA-PROXY integration
-  // return { message: 'Go Serverless v1.0! Your function executed successfully!', event };
+exports.queueMessage = async (event) => {
+	const promise = new Promise((resolve, reject) => {
+		const params = {
+			MessageBody: "Shalom",
+			QueueUrl: QUEUE_URL,
+			//Label: 'Labeling_Shalom'
+		};
+	
+		var paramsNew = {
+		   DelaySeconds: 5,
+		   MessageAttributes: {
+			 "Origin": {
+			   DataType: "String",
+			   StringValue: "GitHub"
+			 },
+			 "Target": {
+			   DataType: "String",
+			   StringValue: "Veracode SAST"
+			 },
+			 "Check_Interval": {
+				 DataType: "Number",
+				 StringValue: "4"
+			 }
+		   },
+		   MessageBody: "Check scan for application ABC",
+		   // MessageDeduplicationId: "TheWhistler",  // Required for FIFO queues
+		   // MessageGroupId: "Group1",  // Required for FIFO queues
+		   QueueUrl: QUEUE_URL
+		 };
+		 
+		 console.log('before SQS');
+	
+		 const response = await sendMessage(paramsNew);
+		 resolve(response);
+	
+	})
+	return promise;
 }
 
-exports.sqsHello = function (event, context, callback) {
+exports.hello = async (event,context,callback) => {
+  	const params = {
+		MessageBody: "Shalom",
+		QueueUrl: QUEUE_URL,
+		//Label: 'Labeling_Shalom'
+	};
+
+
+	console.log(params);
+	console.log(sqs);
+
+	var paramsNew = {
+		// Remove DelaySeconds parameter and value for FIFO queues
+	   DelaySeconds: 5,
+	   MessageAttributes: {
+		 "Origin": {
+		   DataType: "String",
+		   StringValue: "GitHub"
+		 },
+		 "Target": {
+		   DataType: "String",
+		   StringValue: "Veracode SAST"
+		 },
+		 "Check_Interval": {
+			 DataType: "Number",
+			 StringValue: "4"
+		 }
+	   },
+	   MessageBody: "Check scan for application ABC",
+	   // MessageDeduplicationId: "TheWhistler",  // Required for FIFO queues
+	   // MessageGroupId: "Group1",  // Required for FIFO queues
+	   QueueUrl: QUEUE_URL
+	 };
+	 
+	 console.log('before SQS');
+
+	 const response = await sendMessage(paramsNew);
+	 callback(response);
+
+	//  sqs.sendMessage(paramsNew, function(err, data) {
+	// 	 console.log('in SQS');
+	//    if (err) {
+	// 	 console.log("Error", `failed to send message: \"${err}\"`);
+	// 	 responseCode = 500;
+	//    } else {
+	// 	 console.log("Success: ", data.MessageId);
+	// 	 responseBody.message = `Sent to ${QUEUE_URL}`;
+    //      responseBody.messageId = data.MessageId;
+	//    }
+	//    const response = {
+	// 	headers: {
+	// 		"Content-Type": "application/json",
+	// 	},
+	// 	statusCode: responseCode,
+	// 	body: JSON.stringify(
+	// 		responseBody
+	// 	)
+	//   };
+	//    callback(null,response);
+	//  });
+}
+
+exports.sqsHello = async (event, context, callback) => {
 	console.log('it was called');
 
 	console.log(event);
+	const records = event.Records;
+	const event0Attrs = records[0].messageAttributes;
+	console.log(records);
+	console.log(event0Attrs);
 
 	context.done(null, '');
+}
+
+const sendMessage = async (message) => {
+
+	const response = {
+		headers: {
+			"Content-Type": "application/json",
+		}
+	};
+
+	const responseBody = {
+		baseMessage: "Go Serverless v2.0! Your function executed successfully!",
+		message: ""
+    };
+	let responseCode = 200;
+	
+	await sqs.sendMessage(message, function(err, data) {
+		console.log('in SQS');
+	  	if (err) {
+			console.log("Error", `failed to send message: \"${err}\"`);
+			responseCode = 500;
+		} else {
+			console.log("Success: ", data.MessageId);
+			responseBody.message = `Sent to ${QUEUE_URL}`;
+			responseBody.messageId = data.MessageId;
+		}
+		// const response = {
+		// 	headers: {
+		// 		"Content-Type": "application/json",
+		// 	},
+		// 	statusCode: responseCode,
+		// 	body: JSON.stringify(
+		// 		responseBody
+		// 	)
+		// };
+		response.statusCode = responseCode;
+		response.body = JSON.stringify(
+			responseBody
+		);
+	  //return response;
+	});
+	return response;
 }
