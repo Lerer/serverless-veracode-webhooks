@@ -1,6 +1,7 @@
 'use strict';
 
 const AWS = require('aws-sdk');
+const appList = require('./util/apis/applist');
 
 const AWS_ACCOUNT = process.env.ACCOUNT_ID;
 const AWS_REGION = process.env.TARGET_REGION;
@@ -68,7 +69,7 @@ exports.checkScanStatus = (event,context,callback) => {
 	});
 };
 
-exports.sqsSingleScanSample = (event, context, callback) => {
+exports.sqsSingleScanSample = async (event, context, callback) => {
 	console.log('it was called');
 
 	console.log(event);
@@ -76,7 +77,8 @@ exports.sqsSingleScanSample = (event, context, callback) => {
 	const event0Attrs = records[0].messageAttributes;
 	console.log(records);
 	console.log(event0Attrs);
-
-	context.done(null, '');
+	const apps = await appList.getApplications();
+	console.log(`Applications: ${JSON.stringify(apps)}`);
+	//context.done(null, '');
 };
 

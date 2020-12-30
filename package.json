@@ -1,0 +1,29 @@
+{
+  "name": "scan-webhooks-for-veracode",
+  "version": "1.0.0",
+  "description": "A set of functions, queues, and other resources to support async webhooks of scan status from Veracode",
+  "main": "handler.js",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "serverless-dotenv-plugin": "^3.1.0",
+    "serverless-pseudo-parameters": "^2.5.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "sls deploy",
+    "test-app-list": "node -r dotenv/config test/test-hmac.js",
+    "log-queue-listener": "sls logs -f sqsHello -t"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lerer/sls-sqs-test.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Lerer/sls-sqs-test/issues"
+  },
+  "homepage": "https://github.com/Lerer/sls-sqs-test#readme"
+}

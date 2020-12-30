@@ -7,6 +7,10 @@ org: yaakovlerer
 # Check out our docs for more details
 frameworkVersion: '2'
 
+package:
+  exlude:
+    - test/**
+
 custom:
   prod:
     Stack: ExampleSite
@@ -42,12 +46,15 @@ plugins:
 functions:
   hello:
     handler: handler.checkScanStatus
+    memorySize: 192
     events:
       - http:
           path: /checkScanStatus
           method: get
   sqsHello:
     handler: handler.sqsSingleScanSample
+    memorySize: 192
+    timeout: 10
     events:
       - sqs:
           arn: 
