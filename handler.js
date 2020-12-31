@@ -1,7 +1,7 @@
 'use strict';
 
-const AWS = require('aws-sdk');
-const appList = require('./util/apis/applist');
+const AWS = require('aws-sdk')
+const scanCheckEventHandler = require('./process/scanCheckEventHandler');
 
 const AWS_ACCOUNT = process.env.ACCOUNT_ID;
 const AWS_REGION = process.env.TARGET_REGION;
@@ -12,10 +12,21 @@ AWS.config.update({region: AWS_REGION});
 // Create an SQS service object
 var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
 
-const QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/MyQueue`;
+const QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/ScanChecks`;
 
 exports.checkScanStatus = (event,context,callback) => {
+	//console.log(event);
+	if (!event.pathParameters || !event.pathParameters.appGUID) {
+		return callback(null, {
+			headers: {
+				"Content-Type": "application/json",
+			},
+			statusCode: 400,
+			body: "Missing GUID path parameter for the application ID"
+	  	});
+	}
 
+	console.log(event.pathParameters.appGUID);
 	var paramsNew = {
 		// Remove DelaySeconds parameter and value for FIFO queues
 	    DelaySeconds: 5,
@@ -31,9 +42,17 @@ exports.checkScanStatus = (event,context,callback) => {
 		 	"Check_Interval": {
 				DataType: "Number",
 				StringValue: "4"
-		 	}
+			},
+			"appGUID": {
+				DataType: "String",
+				StringValue: event.pathParameters.appGUID
+			},
+			"appLegacyID": {
+				DataType: "Number",
+				StringValue: "0"
+			},
 	   	},
-	   	MessageBody: "Check scan for application ABC",
+	   	MessageBody: "Track Scan Status",
 	   	// MessageDeduplicationId: "TheWhistler",  // Required for FIFO queues
 	   	// MessageGroupId: "Group1",  // Required for FIFO queues
 	   	QueueUrl: QUEUE_URL
@@ -67,18 +86,10 @@ exports.checkScanStatus = (event,context,callback) => {
 	  	};
 	   	callback(null,response);
 	});
-};
+}
 
 exports.sqsSingleScanSample = async (event, context, callback) => {
-	console.log('it was called');
-
-	console.log(event);
-	const records = event.Records;
-	const event0Attrs = records[0].messageAttributes;
-	console.log(records);
-	console.log(event0Attrs);
-	const apps = await appList.getApplications();
-	console.log(`Applications: ${JSON.stringify(apps)}`);
-	//context.done(null, '');
-};
+	console.log('sqsSingleScanSample was called');
+	await scanCheckEventHandler.handleEvent(event);
+}
 

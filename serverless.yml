@@ -8,8 +8,9 @@ org: yaakovlerer
 frameworkVersion: '2'
 
 package:
-  exlude:
+  exclude:
     - test/**
+    - '**/*.test.js'
 
 custom:
   prod:
@@ -36,7 +37,7 @@ provider:
         - sqs:SendMessage
       Resource: 
         Fn::GetAtt:
-          - MyQueue
+          - ScanChecks
           - Arn
   environment: ${self:custom.settings}
 
@@ -46,20 +47,24 @@ plugins:
 functions:
   hello:
     handler: handler.checkScanStatus
-    memorySize: 192
+    memorySize: 128
     events:
       - http:
-          path: /checkScanStatus
+          path: /checkScanStatus/{appGUID}
           method: get
+          request:
+            parameters:
+              path:
+                appGUID: true
   sqsHello:
     handler: handler.sqsSingleScanSample
-    memorySize: 192
-    timeout: 10
+    memorySize: 128
+    timeout: 8
     events:
       - sqs:
           arn: 
             Fn::GetAtt:
-              - MyQueue
+              - ScanChecks
               - Arn
           batchSize: 1
 resources:
@@ -68,3 +73,11 @@ resources:
       Type: "AWS::SQS::Queue"
       Properties:
         QueueName: "MyQueue"
+    ScanChecks:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "ScanChecks"
+    ReportBack:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "ReportBack"

@@ -5,8 +5,8 @@ jspm_packages
 # Serverless directories
 .serverless
 
-# Local text
-test
+# Local test
+
 
 # ignore env
 .env
