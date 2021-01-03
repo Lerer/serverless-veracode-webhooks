@@ -126,7 +126,7 @@ scans: [
 
 //testGetAppByID();
 //testSandboxesList();
-//testSandboxLastScanStatus();
+testSandboxLastScanStatus();
 //testAppBuildInfo();
-testSandboxBuildInfo();
+//testSandboxBuildInfo();
 

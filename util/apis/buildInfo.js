@@ -1,9 +1,17 @@
 const apiUtil = require('../helper/apiQueryHandler');
 const xml2js = require('xml2js');
 
+const STATUS = {
+    INCOMPLETE:"Incomplete",
+    SCAN_IN_PROGRESS: "Scan In Process",
+    PRESCAN_SUBMITTED: "Pre-Scan Submitted",
+    PRESCAN_FINISHED: "Pre-Scan Success",
+    RESULT_READY: "Results Ready"
+};
+
 const getBuildInfo = async (appLegacyId,sandboxLegacyId) => {
     console.log('getBuildInfo');
-    let buildInfo = '<null/>';
+    let jsonBuildInfo = {};
     let params = {
         'app_id':appLegacyId+''
     };
@@ -17,24 +25,23 @@ const getBuildInfo = async (appLegacyId,sandboxLegacyId) => {
             '/api/5.0/getbuildinfo.do', 
             params
         );
-        buildInfo = response.data;
-        let jsonData = {};
-        xml2js.parseString(buildInfo,(err,result)=> {
+        const buildInfo = response.data;
+        xml2js.parseString(buildInfo,{explicitArray:false,trim:true},(err,result)=> {
             console.log('printing result');
             console.log(result.buildinfo.build);
-            console.log(result.buildinfo.build[0].analysis_unit);
-            jsonData = result;
+            //console.log(result.buildinfo.build[0].analysis_unit);
+            jsonBuildInfo = result.buildinfo.build;
             console.log('finish printing results');
         });
-        //console.log(response.data);
-        //console.log(jsonData);
+
     } catch (error) {
         console.error(error.response);
     }
     console.log('end getBuildInfo');
-    return buildInfo;
+    return jsonBuildInfo;
 }
 
 module.exports = {
-    getAppbuildInfo : getBuildInfo
+    getAppbuildInfo : getBuildInfo,
+    STATUS
 }
