@@ -45,6 +45,13 @@ plugins:
   - serverless-pseudo-parameters
 
 functions:
+  githubListener:
+    handler: githubHandler.webhookListen
+    memorySize: 128
+    events:
+      - http:
+          path: /github
+          method: post
   hello:
     handler: handler.checkScanStatus
     memorySize: 128

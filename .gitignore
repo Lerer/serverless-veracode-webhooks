@@ -5,8 +5,8 @@ jspm_packages
 # Serverless directories
 .serverless
 
-# Local test
-
+# Local secrets
+*.pem
 
 # ignore env
 .env

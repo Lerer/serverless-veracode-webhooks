@@ -4,6 +4,7 @@
   "description": "A set of functions, queues, and other resources to support async webhooks of scan status from Veracode",
   "main": "handler.js",
   "dependencies": {
+    "@octokit/auth-app": "^2.10.5",
     "axios": "^0.21.1",
     "serverless-dotenv-plugin": "^3.1.0",
     "serverless-pseudo-parameters": "^2.5.0",
