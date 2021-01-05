@@ -5,6 +5,7 @@
   "main": "handler.js",
   "dependencies": {
     "@octokit/auth-app": "^2.10.5",
+    "@octokit/rest": "^18.0.12",
     "axios": "^0.21.1",
     "serverless-dotenv-plugin": "^3.1.0",
     "serverless-pseudo-parameters": "^2.5.0",
@@ -17,6 +18,7 @@
     "test": "jest",
     "deploy": "sls deploy --stage dev",
     "test-app-list": "node -r dotenv/config test/test-hmac.js",
+    "test-oktokit": "node -r dotenv/config --trace-warnings test/testGithub.js",
     "log-queue-listener": "sls logs -f sqsHello -t"
   },
   "repository": {
