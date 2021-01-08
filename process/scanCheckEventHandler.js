@@ -16,7 +16,7 @@ AWS.config.update({region: AWS_REGION});
 const RECHECK_ACTION = {
 	STOP : -1,
 	ERROR: -2,
-	SCANNING: 12,
+	SCANNING: 15,
 	FINISHED: -10
 }
 
@@ -61,7 +61,7 @@ const handleEvent = async (customEvent) => {
 
 			// report and create a new check-run
 			const sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(record.body);
-			const newCheckRun = await checkRun.createNewCheckRun(
+			const newCheckRun = await checkRun.createCheckRun(
 				sqsBaseMessage.repository_owner_login,
 				sqsBaseMessage.repository_name,
 				sqsBaseMessage.commit_sha);
@@ -91,14 +91,15 @@ const handleEvent = async (customEvent) => {
 				console.log('===  record body start on finish ===')
 				console.log(recordBody);
 				console.log('===  record body finish on finish ===')
-				const checkRunFinished = checkRun.updateNewCheckRun(
+				const checkRunFinished = checkRun.updateCheckRun(
 					recordBody.repository_owner_login,
 					recordBody.repository_name,
 					recordBody.data.id,
-					{
-						status: 'complete',
+					{	
+						status: 'completed',
 						conclusion: 'neutral',
 						output: {
+							title: 'Veracode SAST Scan check',
 							summary: 'scan finished'
 						}
 					});
@@ -110,7 +111,7 @@ const handleEvent = async (customEvent) => {
 				// any other rescan action
 				console.log(`requeuing message for another check in ${scanRecheckTime} seconds`);
 				// requeue same message with an update on the current status as the latest status
-				await requeueMessage(eventAttrs,scanRecheckTime,JSON.stringify({...record.body,previous_scan_status:response.analysis_unit['$'].status}),SCAN_CHECK_QUEUE_URL);
+				await requeueMessage(eventAttrs,scanRecheckTime,JSON.stringify({...recordBody,previous_scan_status:response.analysis_unit['$'].status}),SCAN_CHECK_QUEUE_URL);
 			}
 			// TODO - depend on status - 
 			// - requeue the same message, 
@@ -268,7 +269,7 @@ const calculateRescanTimeFromAnalysisUnit = (analysisUnit) => {
 				scanRecheckTime = 60;
 				break;
 			case buildInfoHandler.STATUS.SCAN_IN_PROGRESS:
-				scanRecheckTime = 12;
+				scanRecheckTime = RECHECK_ACTION.SCANNING;
 				break;
 			default:
 				scanRecheckTime = RECHECK_ACTION.ERROR;

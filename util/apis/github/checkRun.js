@@ -40,7 +40,7 @@ const getAuthApp = async () => {
     return;
 }
 
-const createNewCheckRun = async (owner,repo,headSHA) => {
+const createCheckRun = async (owner,repo,headSHA) => {
     console.log('createNewCheckRun - START');
     let check;
     try {
@@ -48,7 +48,7 @@ const createNewCheckRun = async (owner,repo,headSHA) => {
         check = await appOctokit.checks.create({
             owner,
             repo,
-            name: 'Veracode full Static Scan',
+            name: 'Veracode Static Scan',
             status: 'queued',
             head_sha: headSHA
         });
@@ -61,23 +61,23 @@ const createNewCheckRun = async (owner,repo,headSHA) => {
     return check;
 }
 
-const updateNewCheckRun = async (owner,repo,checkRunId,input) => {
-    console.log('createNewCheckRun - START');
+const updateCheckRun = async (owner,repo,checkRunId,input) => {
+    console.log('updateNewCheckRun - START');
     let check;
     try {
         const appOctokit = await getAuthApp();
-        check = await appOctokit.checks.create({
+        check = await appOctokit.checks.update({
             ...input,
             owner,
             repo,
             check_run_id: checkRunId
         });
-        console.log(check);
+        //console.log(check);
     } catch (e) {
         console.log('===========   ERROR   ===============================');
         console.log(e);
     }
-    console.log('createNewCheckRun - END');
+    console.log('updateNewCheckRun - END');
     return check;
 }
 
@@ -129,7 +129,7 @@ const baseSQSMessageFromGithubEvent = (eventJson) => {
 
 module.exports = {
     listRepoIssue,
-    createNewCheckRun,
+    createCheckRun,
     baseSQSMessageFromGithubEvent,
-    updateNewCheckRun
+    updateCheckRun
 }

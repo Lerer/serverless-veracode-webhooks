@@ -3,6 +3,7 @@
 const { Octokit } = require("@octokit/rest");
 const { createAppAuth } = require("@octokit/auth-app");
 const fs = require('fs');
+const checkRunHandler = require("../util/apis/github/checkRun");
 
 // const octokit = new Octokit({
 //   auth: "mypersonalaccesstoken123",
@@ -56,5 +57,19 @@ const testIssuesList = async () => {
     }
 };
 
+const testUpdateCheckrun = () => {
+    const updateCheckResponse = checkRunHandler.updateCheckRun('Lerer','veracode-async',1666740521,{
+        status: 'completed',
+        conclusion: 'neutral',
+        output: {
+            summary: 'scan finished',
+            title: 'Veracode SAST Scan check',
+            text: 'this is the text element'
+        }
+    });
+    console.log(updateCheckResponse);
+}
 
-testIssuesList();
+
+//testIssuesList();
+testUpdateCheckrun();
