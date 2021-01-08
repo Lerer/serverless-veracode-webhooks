@@ -3,7 +3,6 @@
 const { Octokit } = require("@octokit/rest");
 const { createAppAuth } = require("@octokit/auth-app");
 const fs = require('fs');
-const Axios = require('axios');
 
 // const octokit = new Octokit({
 //   auth: "mypersonalaccesstoken123",

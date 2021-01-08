@@ -1,4 +1,4 @@
-const apiUtil = require('../helper/apiQueryHandler');
+const apiUtil = require('../../helper/apiQueryHandler');
 
 const getSandboxes = async (appGUID) => {
     console.log('getSandboxes');

@@ -23,6 +23,8 @@ custom:
     ACCOUNT_ID: "#{AWS::AccountId}"
     TARGET_REGION: ${self:provider.region}
     logLevel: ${self:custom.${self:provider.stage}.LogLevel}
+    GITHUB_APP_ID: 94775
+    GITHUB_APP_INSTALL_ID: 13893866
 
 provider:
   name: aws
@@ -36,13 +38,13 @@ provider:
       Action:
         - sqs:SendMessage
       Resource: 
-        Fn::GetAtt:
-          - ScanChecks
-          - Arn
+        - { "Fn::GetAtt" : ["ScanChecks","Arn"]}
+        - { "Fn::GetAtt" : ["GithubReportBack","Arn"]}
   environment: ${self:custom.settings}
 
 plugins:
   - serverless-pseudo-parameters
+  - serverless-iam-roles-per-function
 
 functions:
   githubListener:
@@ -79,7 +81,7 @@ resources:
       Type: "AWS::SQS::Queue"
       Properties:
         QueueName: "ScanChecks"
-    ReportBack:
+    GithubReportBack:
       Type: "AWS::SQS::Queue"
       Properties:
-        QueueName: "ReportBack"
+        QueueName: "GithubReportBack"

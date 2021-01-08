@@ -1,4 +1,4 @@
-const apiUtil = require('../helper/apiQueryHandler');
+const apiUtil = require('../../helper/apiQueryHandler');
 const xml2js = require('xml2js');
 
 const STATUS = {
@@ -6,6 +6,7 @@ const STATUS = {
     SCAN_IN_PROGRESS: "Scan In Process",
     PRESCAN_SUBMITTED: "Pre-Scan Submitted",
     PRESCAN_FINISHED: "Pre-Scan Success",
+    SUBMITTED_TO_SCAN:'Submitted to Engine',
     RESULT_READY: "Results Ready"
 };
 
