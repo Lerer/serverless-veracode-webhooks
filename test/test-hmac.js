@@ -1,6 +1,6 @@
-const buildInfoHandler = require('../util/apis/buildInfo');
-const appHandler = require('../util/apis/applications');
-const sandboxHandler = require('../util/apis/sandboxes');
+const buildInfoHandler = require('../util/apis/veracode/buildInfo');
+const appHandler = require('../util/apis/veracode/applications');
+const sandboxHandler = require('../util/apis/veracode/sandboxes');
 
 //const res = await appListHandler.getApplications();
 
@@ -126,7 +126,7 @@ scans: [
 
 //testGetAppByID();
 //testSandboxesList();
-testSandboxLastScanStatus();
-//testAppBuildInfo();
+//testSandboxLastScanStatus();
+testAppBuildInfo();
 //testSandboxBuildInfo();
 

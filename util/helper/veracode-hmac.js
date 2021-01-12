@@ -27,7 +27,7 @@ function getByteArray(hex)  {
 
 function generateHeader (id, secret,host, urlPath,urlQueryParams, method) {
 	urlPath += urlQueryParams;
-	console.log(`urlPath: ${urlPath}`);
+	console.log(`generateHeader for urlPath: ${urlPath}`);
     var data = `id=${id}&host=${host}&url=${urlPath}&method=${method}`;
 	var timestamp = (new Date().getTime()).toString();
 	var nonce = crypto.randomBytes(getNonceSize()).toString('hex');

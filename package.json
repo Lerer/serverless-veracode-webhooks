@@ -19,6 +19,7 @@
     "test": "jest",
     "deploy": "sls deploy --stage dev",
     "test-app-list": "node -r dotenv/config test/test-hmac.js",
+    "test-veracode-apis": "node -r dotenv/config --trace-warnings test/testVeracodeAPIs.js",
     "test-oktokit": "node -r dotenv/config --trace-warnings test/testGithub.js",
     "log-queue-listener": "sls logs -f sqsHello -t"
   },

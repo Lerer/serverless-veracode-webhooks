@@ -1,6 +1,7 @@
 const appsHandler = require('../util/apis/veracode/applications');
 const sandboxHandler = require('../util/apis/veracode/sandboxes');
 const buildInfoHandler = require('../util/apis/veracode/buildInfo');
+const buildSummaryHandler = require('../util/apis/veracode/buildSummary');
 
 const checkRun = require('../util/apis/github/checkRun');
 
@@ -17,7 +18,8 @@ const RECHECK_ACTION = {
 	STOP : -1,
 	ERROR: -2,
 	SCANNING: 15,
-	FINISHED: -10
+	FINISHED: -10,
+	AWAITING_POLICY_CALCULATION: 20
 }
 
 // Create an SQS service object
@@ -25,6 +27,40 @@ var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
 
 const SCAN_CHECK_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/ScanChecks`;
 //const GITHUB_REPORT_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/GithubReportBack`;
+
+/*
+check for :
+
+2021-01-11T14:53:37.860Z	9dffc5d0-7c9c-5781-9cb6-9da614345ff5	INFO	{
+  '$': {
+    version: '477789568',
+    build_id: '10322218',
+    submitter: 'Yaakov Lerer',
+    platform: 'Not Specified',
+    lifecycle_stage: 'Not Specified',
+    results_ready: 'true',
+    policy_name: 'test conditional pass',
+    policy_version: '1',
+    policy_compliance_status: 'Calculating...',
+    policy_updated_date: '2021-01-11T09:49:37-05:00',
+    rules_status: 'Calculating...',
+    grace_period_expired: 'true',
+    scan_overdue: 'false',
+    legacy_scan_engine: 'false'
+  },
+  analysis_unit: {
+    '$': {
+      analysis_type: 'Static',
+      published_date: '2021-01-11T09:53:27-05:00',
+      published_date_sec: '1610376807',
+      status: 'Results Ready',
+      engine_version: '20201206173220'
+    }
+  }
+}
+
+*/
+
 
 /*
  handle ScanCheck event
@@ -43,7 +79,7 @@ const handleEvent = async (customEvent) => {
 	for (let record of records) {
 		const eventAttrs = record.messageAttributes;
 		const recordBody = JSON.parse(record.body);
-		console.log(record);
+		console.log(recordBody);
 		let response = {};
 		if (!eventAttrs.appLegacyID) {	
 			//response = await getLagacyIDsFromGUID(eventAttrs.appGUID.stringValue,eventAttrs.sandboxGUID.stringValue || null); 
@@ -51,12 +87,14 @@ const handleEvent = async (customEvent) => {
 			console.log(response);
 			if (response.appLegacyID && response.appLegacyID.stringValue!=='0') {
 				eventAttrs.appLegacyID = response.appLegacyID;
+				eventAttrs.appGUID = response.appGUID;
 			} else {
 				console.log('Error - could not find application id');
 				return;
 			}
 			if (response.sandboxLegacyID) {
 				eventAttrs.sandboxLegacyID = response.sandboxLegacyID;
+				eventAttrs.sandboxGUID = response.sandboxGUID;
 			}
 
 			// report and create a new check-run
@@ -68,6 +106,11 @@ const handleEvent = async (customEvent) => {
 			console.log('New check run created');
 			console.log(newCheckRun);
 
+			// Adding the check run id to the sqs attributes
+			eventAttrs.checkRunID = {
+				dataType: "Number",
+				stringValue: newCheckRun.data.id + ''
+			}
 			// requeue with lagacy ID
 			console.log(eventAttrs);
 
@@ -77,49 +120,120 @@ const handleEvent = async (customEvent) => {
 
 			console.log('Finish updating with lagacy ids and requeue for scan check');
 		} else {
+			console.log('Starting to check for build info');
 			// we can start the check of the build status
-			response = await getLatestBuildStatus(eventAttrs);
+			const buildInfo = await getLatestBuildStatus(eventAttrs);
+			//const buildInfo = response;
 			let scanRecheckTime = RECHECK_ACTION.STOP;
-			if (response['$'] && response.analysis_unit ) {
-				scanRecheckTime = calculateRescanTimeFromAnalysisUnit(response.analysis_unit);
+			if (buildInfo['$'] && buildInfo.analysis_unit ) {
+				scanRecheckTime = calculateRescanTimeFromAnalysisUnit(buildInfo.analysis_unit);
+				// update with build id if not exist
+				if (!eventAttrs.buildID) {
+					eventAttrs.buildID = {
+						dataType: "String",
+						stringValue: buildInfo['$'].build_id
+					}
+				}
 			};
 
 			if (scanRecheckTime === RECHECK_ACTION.STOP) {
-				// TODO - report back to sender
+				const checkRunID = eventAttrs.checkRunID.stringValue;
+				await checkRun.updateCheckRun(
+					sqsBaseMessage.repository_owner_login,
+					sqsBaseMessage.repository_name,
+					checkRunID,{
+						status: 'completed',
+						conclusion: 'skipped',
+						output: {
+							summary: 'Issue with calculating recheck time. Bailing out!',
+							title: checkRunHandler.TEST_RUN_TITLE,
+						//	text: parsedSummary.textMD
+						}
+					});
 			} else if (scanRecheckTime === RECHECK_ACTION.FINISHED) {
+				const appGUID = eventAttrs.appGUID.stringValue;
 				// TODO - notify finished scan by updating the status
 				console.log('===  record body start on finish ===')
 				console.log(recordBody);
 				console.log('===  record body finish on finish ===')
-				const checkRunFinished = checkRun.updateCheckRun(
+
+				const parsedSummary = await buildSummaryHandler.getParseBuildSummary(appGUID,undefined,eventAttrs.buildID.stringValue);
+				console.log(parsedSummary);
+				const complianceStatus = buildInfo['$'].policy_compliance_status;
+				const checkRunFinished = await checkRun.updateCheckRun(
 					recordBody.repository_owner_login,
 					recordBody.repository_name,
 					recordBody.data.id,
 					{	
 						status: 'completed',
-						conclusion: 'neutral',
+						conclusion: complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.PASS ? 'success' :  
+							complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING ? 'neutral' : 'failure',
 						output: {
-							title: 'Veracode SAST Scan check',
-							summary: 'scan finished'
+							summary: parsedSummary.summaryMD,
+							title: checkRun.TEST_RUN_TITLE,
+							text: parsedSummary.textMD
 						}
 					});
-				console.log('Check run updated with a complete status');
+				console.log('Check run => updated with a complete status');
 				console.log(checkRunFinished);
+				
+				// if policy is not calculated, requeue again
+				if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
+					await requeueMessage(
+						eventAttrs,
+						RECHECK_ACTION.AWAITING_POLICY_CALCULATION,
+						JSON.stringify({...recordBody,previous_scan_status:buildInfoHandler.STATUS.RESULT_READY}),
+						SCAN_CHECK_QUEUE_URL);
+					console.log('Scan check finish - Re-queue for recheck as policy is being calculated');
+				} else {
+					console.log('Scan check finish - no recheck is required');
+				}
+
 			} else if (scanRecheckTime === RECHECK_ACTION.ERROR) {
 				console.log(`Error canculating recheck time - check the scan status message`);
+				const checkRunFailed = await checkRun.updateCheckRun(
+					recordBody.repository_owner_login,
+					recordBody.repository_name,
+					recordBody.data.id,
+					{	
+						status: 'completed',
+						conclusion: 'failure',
+						output: {
+							summary: `Unknow scan status: ${buildInfo.analysis_unit['$'].status}`,
+							title: checkRun.TEST_RUN_TITLE
+						}
+					});
+				console.log(checkRunFailed);
 			} else if (scanRecheckTime > 0) {
+				// Update if status changed
+				if (buildInfo.analysis_unit['$'].status !== recordBody.previous_scan_status) {
+					const reportingStatus = getGithubStatusFromBuildStatus(buildInfo);
+					const checkRunUpdate = await checkRun.updateCheckRun(
+						recordBody.repository_owner_login,
+						recordBody.repository_name,
+						recordBody.data.id,
+						{	
+							status: reportingStatus.status,
+							conclusion: reportingStatus.conclusion,
+							output: {
+								title: checkRun.TEST_RUN_TITLE,
+								summary: `Build ${eventAttrs.buildID.stringValue} submitted. Awaiting scan results.`,
+								text: `Veracode scan status update: ${buildInfo.analysis_unit['$'].status}`
+							}
+						});
+				}
 				// any other rescan action
 				console.log(`requeuing message for another check in ${scanRecheckTime} seconds`);
 				// requeue same message with an update on the current status as the latest status
-				await requeueMessage(eventAttrs,scanRecheckTime,JSON.stringify({...recordBody,previous_scan_status:response.analysis_unit['$'].status}),SCAN_CHECK_QUEUE_URL);
+				await requeueMessage(eventAttrs,scanRecheckTime,JSON.stringify({...recordBody,previous_scan_status:buildInfo.analysis_unit['$'].status}),SCAN_CHECK_QUEUE_URL);
 			}
 			// TODO - depend on status - 
 			// - requeue the same message, 
 			// - and/or requeue response to the sender
-			console.log('Finish process scan check');
+			//console.log('Finish process scan check');
 		}
 		//console.log(`Processing response: ${JSON.stringify(response)}`);
-		console.log('Finish process event record')
+		//console.log('Finish process event record')
 	}
 	console.log('handleEvent - END')
 }
@@ -186,6 +300,10 @@ const getLagacyIDsFromName = async (appName,sandboxName) => {
 		return retVal;
 	}
 
+	if (sandboxName && sandboxName!==null && sandboxName.length>0) {
+		// TODO - add sandbox referance
+	}
+
 	// if (sandboxGUID && sandboxGUID!=null) {
 	// 	// get the sandbox id
 	// 	response = await sandboxHandler.getSandboxByGUID(appGUID,sandboxGUID);
@@ -211,7 +329,7 @@ const getLatestBuildStatus = async (eventAttrs) => {
 	}
 	const buildInfo = await buildInfoHandler.getAppbuildInfo(appId,sandboxId);
 	// log the build info
-	console.log(buildInfo);
+	//console.log(buildInfo);
 
 	return buildInfo;
 }
@@ -219,9 +337,9 @@ const getLatestBuildStatus = async (eventAttrs) => {
 const requeueMessage = async (msgAttrs,delay,msgBody,queueUrl) => {
 	console.log('requeueMessage - START');
 	// send a message to the queue
-	console.log(msgBody.length);
+	//console.log(msgBody.length);
 	//if (msgBody.length >262140) {
-		console.log(msgBody);
+	console.log(msgBody);
 	//}
 
 	var sqsPayload = {
@@ -248,11 +366,11 @@ const replaceSQSMessageAttr = (msgAttr) => {
 }
 
 const calculateRescanTimeFromAnalysisUnit = (analysisUnit) => {
-	console.log('calculateRescanTimeFromAnalysisUnit - START');
+	//console.log('calculateRescanTimeFromAnalysisUnit - START');
 	let scanRecheckTime = RECHECK_ACTION.STOP;
 	if (analysisUnit['$']) {
 		const scanStatus = analysisUnit['$'].status;
-		console.log(`Last scan status: '${scanStatus}'`);
+		console.log(`calculateRescanTimeFromAnalysisUnit - Last scan status: '${scanStatus}'`);
 		switch (scanStatus) {
 			case buildInfoHandler.STATUS.RESULT_READY:
 				// TODO - report scan done
@@ -278,8 +396,34 @@ const calculateRescanTimeFromAnalysisUnit = (analysisUnit) => {
 	} else {
 		console.log(`no '$' element in analysisUnit`);
 	}
-	console.log('calculateRescanTimeFromAnalysisUnit - END');
+	//console.log('calculateRescanTimeFromAnalysisUnit - END');
 	return scanRecheckTime;
+}
+
+const getGithubStatusFromBuildStatus = (buildInfo) => {
+	const status = {
+		status: 'completed'
+	}
+	if (buildInfo && buildInfo.analysis_unit && buildInfo.analysis_unit['$']) {
+		const buildStatus = buildInfo.analysis_unit['$'].status;
+		switch (buildStatus) {
+			case buildInfoHandler.STATUS.RESULT_READY:
+				// TODO - report scan done
+				status.conclusion = 'neutral';
+				break;
+			case buildInfoHandler.STATUS.INCOMPLETE:
+			case buildInfoHandler.STATUS.PRESCAN_SUBMITTED:
+			case buildInfoHandler.STATUS.SUBMITTED_TO_SCAN:
+			case buildInfoHandler.STATUS.PRESCAN_FINISHED:
+				status.status = 'queued';
+				break;
+			case buildInfoHandler.STATUS.SCAN_IN_PROGRESS:
+				status.status = 'in_progress';
+				break;
+		}
+	}
+
+	return status;
 }
 
 module.exports = {

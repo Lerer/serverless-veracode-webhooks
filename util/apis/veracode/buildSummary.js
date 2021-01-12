@@ -1,16 +1,16 @@
-var convert = require('xml-js')
-
 const apiUtil = require('../../helper/apiQueryHandler');
+
+const POLICY_COMPLIANCE = {
+  PASS: 'Pass',
+  DID_NOT_PASS: 'Did Not Pass',
+  CONDITIONAL_PASS:'Conditional Pass',
+  CALCULATING: 'Calculating...'
+}
 
 const getBuildSummary = async (appGUID,sandboxGUID,buildId) => {
     console.log('getBuildSummary - START');
     let jsonBuildSummary = {};
-    let params = {
-        'app_id':appLegacyId+''
-    };
-    if (sandboxLegacyId && sandboxLegacyId!==null) {
-        params.sandbox_id = sandboxLegacyId+'';
-    }
+    
     try {
         
         const requestParameters = {};
@@ -25,10 +25,9 @@ const getBuildSummary = async (appGUID,sandboxGUID,buildId) => {
             
         jsonBuildSummary = response.data;
         
-        console.log('printing result');
-        console.log(jsonBuildSummary);
-        //console.log(result.buildinfo.build[0].analysis_unit);
-        console.log('finish printing results');
+        //console.log('getBuildSummary - printing result');
+        //console.log(jsonBuildSummary);
+        //console.log('getBuildSummary - finish printing results');
         
     } catch (e) {
         console.log(e.message, e)
@@ -37,164 +36,131 @@ const getBuildSummary = async (appGUID,sandboxGUID,buildId) => {
     return jsonBuildSummary;
 }
 
-module.exports = {
-    getBuildSummary
+const getParseBuildSummary = async (appGUID,sandboxGUID,buildId) => {
+  const response = {
+    summary: {},
+    summaryMD: '',
+    textMD: ''
+  };
+  const summary = await getBuildSummary(appGUID,sandboxGUID,buildId);
+  //console.log(summary);
+  response.summary = summary;
+  if (summary && summary['static-analysis'].published_date && summary['static-analysis'].published_date.length>0) {
+    
+    const summaryMD = getBuildSummaryMarkDown(summary);
+    const textMD = getBuildSumaryDetails(summary);
+    response.summaryMD = summaryMD;
+    response.textMD = textMD;
+    
+    console.log(textMD);
+    console.log(summaryMD);
+  } else {
+    console.log(`Could not find summary report for build ${buildId}`);
+  }
+  return response;
 };
 
+const getBuildSummaryMarkDown = (buildSummary) => {
+    let summaryHeading = `> Veracode Application: __${buildSummary.app_name}__  `;
+    summaryHeading = `${summaryHeading}\n> Policy name: __${buildSummary.policy_name}__  `;
+    summaryHeading = `${summaryHeading}\n> Compliance status: __${buildSummary.policy_compliance_status}__   \n`;
 
-/*
-app_id - new GUID of the application
-*/
-module.exports.getStatus = async (appId, lagacyId) => {
-  const check_run = {
-    conclusion: 'neutral',
-    output_summary: 'Unavailable',
-    details_url: 'https://analysiscenter.veracode.com/'
-  }
-  const req = {
-    getAppList: {
-      name: 'getApplication',
-      path: '/appsec/v1/applications',
-      host: 'api.veracode.com',
-      method: 'GET'
-    },
-    getApplication: {
-      name: 'getApplication',
-      path: `/appsec/v1/applications/${appId}`,
-      host: 'api.veracode.com',
-      method: 'GET'
-    },
-    getBuildList: {
-      name: 'getBuildList',
-      path: `/api/5.0/getbuildlist.do?app_id=${lagacyId}`,
-      host: 'analysiscenter.veracode.com',
-      method: 'GET'
-    },
-    getSummaryreport: {
-      name: 'getSummaryreport',
-      path: '/api/4.0/summaryreport.do?build_id=',
-      host: 'analysiscenter.veracode.com',
-      method: 'GET'
-    }
-  }
-  try {
-    // const application  = await request(req.getApplication);
-    const builds = await request(req.getBuildList)
-    const buildsJs = convert.xml2js(builds, { compact: true, spaces: 4, ignoreDeclaration: true })
-    console.log(buildsJs)
-    const build = buildsJs.buildlist.build.filter(build => {
-      return build._attributes.version.indexOf('3190682e') > -1
-    })
-    if (build.length === 1) {
-      console.log({ build: build[0] })
-      const reportReq = { ...req.getSummaryreport, path: `${req.getSummaryreport.path}${build[0]._attributes.build_id}` }
-      const report = await request(reportReq)
+    const icon = policyIconMd(buildSummary.policy_compliance_status);
 
-      const reportJs = convert.xml2js(report, { compact: true, spaces: 4, ignoreDeclaration: true })
-      const reportSummary = reportJs.summaryreport._attributes
-      // https://analysiscenter.veracode.com/auth/index.jsp#ViewReportsDetailedReport:74838:791009:8005648:7983204:7998267:::::2084879
-      console.log({ summaryReport: reportSummary })
-      // const sandboxId = reportSummary.sandbox_id
-      const appName = reportSummary.app_name
-      // console.log({
-      //     policy_name:reportJs.summaryreport._attributes.policy_name,
-      //     policy_compliance_status: reportJs.summaryreport._attributes.policy_compliance_status
-      // })
-      console.log({ 'static-analysis': reportJs.summaryreport['static-analysis'] })
-      // console.log({severity:reportJs.summaryreport.severity});
-      // console.log({"flaw-status":reportJs.summaryreport["flaw-status"]});
-      let summaryHeading = `# Veracode Application: ${appName}`
-      summaryHeading = `${summaryHeading}\n### Policy name: ${reportJs.summaryreport._attributes.policy_name}`
-      summaryHeading = `${summaryHeading}\n### Compliance status: ${reportJs.summaryreport._attributes.policy_compliance_status}\n`
+    const summary = parseSummary(buildSummary.severity);
+    const changes = parseChanges(buildSummary['flaw-status']);
 
-      const summary = parseSummary(reportJs.summaryreport.severity)
-      // console.log(summary);
-      check_run.output_summary = `${summaryHeading}${summary}`
-      // TODO - update conclusion
-      // TODO - add result image: https://analysiscenter.veracode.com/images/policy/icon-shield-0.png
-      /*
-            Inline-style:
-            ![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
-            */
-      check_run.conclusion = 'neutral'
-      const reportDirect = `${reportSummary.account_id}:${reportSummary.app_id}:${reportSummary.build_id}:${reportSummary.analysis_id}:${reportSummary.static_analysis_unit_id}:::::${reportSummary.sandbox_id}`
-      check_run.details_url = `https://analysiscenter.veracode.com/auth/index.jsp#ViewReportsDetailedReport:${reportDirect}`
-    } else {
-      console.log('No build found')
-    }
-  } catch (e) {
-    console.log(e.message, e)
-    check_run.conclusion = 'cancelled'
-  }
+    // console.log(summary);
+    let outputSummary = `${summaryHeading}  \n  ${icon}  \n  ${summary}  \n\n  ${changes}`;
 
-  return check_run
+    return outputSummary;
 }
 
-const request = async (reqStruct) => {
-  const header = this.generateHeader(reqStruct.host, reqStruct.path, reqStruct.method)
-
-  const url = `https://${reqStruct.host}${reqStruct.path}`
-  // console.log(url);
-  const response = await axios.get(url, {
-    headers: {
-      Authorization: header
-    }
-  })
-    .catch(error => {
-      console.log(error.message)
-      return error.response
-    })
-
-  console.log(response.data)
-  return response.data
+const getBuildSumaryDetails = (buildSummary) => {
+    const staticAnalysisDetails = buildSummary['static-analysis'];
+    let details = `- Build submitted: ${staticAnalysisDetails.submitted_date}   \n`;
+    details = `${details}- Results published: ${staticAnalysisDetails.published_date}   \n`;
+    details = `${details}- Scan score: ${staticAnalysisDetails.score}   \n`;
+    details = `${details}- Scan submitter: ${buildSummary.submitter}   \n`;
+    return details;
 }
 
 const parseSummary = (severities) => {
-  let summary = 'Severity | Total \n --- | ---'
+  let summary = 'Severity | Total \n --- | ---:'
   severities.map(sev => {
     // console.log(sev._attributes);
-    // console.log(sev.category);
-    const sevName = number2severity(sev._attributes.level)
+    //console.log(sev);
+    const sevName = number2severity(sev.level)
     let totalForSev = 0
     let subCat = ''
     if (sev.category !== undefined) {
       if (Array.isArray(sev.category)) {
         sev.category.map(cat => {
-          subCat = subCat + '\n   ' + cat._attributes.categoryname + ' | ' + cat._attributes.count
-          totalForSev = totalForSev + parseInt(cat._attributes.count)
+            subCat = `${subCat}  \n&nbsp;&nbsp;&nbsp;&nbsp;${cat.categoryname} | ${cat.count}`;
+            totalForSev = totalForSev + parseInt(cat.count)
         })
       } else {
-        subCat = '\n   ' + sev.category._attributes.categoryname + ' | ' + sev.category._attributes.count
-        totalForSev = parseInt(sev.category._attributes.count)
+        subCat = '\n   ' + sev.category.categoryname + ' | ' + sev.category.count
+        totalForSev = parseInt(sev.category.count)
       }
     }
-    summary = summary + '\n**' + sevName + '** | **' + totalForSev + '**' + subCat
+    summary = `${summary} \n**${sevName}** | **${totalForSev}** ${subCat}`;
   })
 
   return summary
 }
 
+const parseChanges = (flawStatus) => {
+    let status = `|Flaw status  | |  \n :--- | ---: \n New | ${flawStatus.new}\n`;
+    status = `${status} Open | ${flawStatus.open}\n`;
+    status = `${status} Re-open | ${flawStatus.reopen}\n`;
+    status = `${status} Fixed | ${flawStatus.fixed}\n`;
+    status = `${status} Total | ${flawStatus.total}\n`;
+    status = `${status} Not mitigated | ${flawStatus.not_mitigated}\n`;
+    return status;
+}
+
 const number2severity = (numStr) => {
-  if (numStr === '5') {
+  if (numStr === 5) {
     return 'Very High'
-  } else if (numStr === '4') {
+  } else if (numStr === 4) {
     return 'High'
-  } else if (numStr === '3') {
+  } else if (numStr === 3) {
     return 'Medium'
-  } else if (numStr === '2') {
+  } else if (numStr === 2) {
     return 'Low'
-  } else if (numStr === '1') {
+  } else if (numStr === 1) {
     return 'Very Low'
-  } else if (numStr === '0') {
+  } else if (numStr === 0) {
     return 'Informational'
   }
 }
-// TODO - finish this function and add to summary
+
 const policyIconMd = (policyComplianceStatus) => {
   const iconPrefix = 'https://analysiscenter.veracode.com/images/policy/icon-shield' // -0.png'
-  if (policyIcon === undefined || policyIcon === null || policyIcon.length < 4) {
-    return ''
-  } else if (policyComplianceStatus === 'Pass') {
-    return `![alt text](${iconPrefix}-0.png)`
+  let iconType = '3';
+  switch (policyComplianceStatus) {
+    case POLICY_COMPLIANCE.PASS:
+      iconType = 0;
+      break;
+    case POLICY_COMPLIANCE.DID_NOT_PASS:
+      iconType = 2;
+      break;
+    case POLICY_COMPLIANCE.CONDITIONAL_PASS:
+      iconType = 1;
+      break;
+    case POLICY_COMPLIANCE.CALCULATING:
+      iconType = 4;
+      break;
   }
+  return `![alt text](${iconPrefix}-${iconType}.png "${policyComplianceStatus}")`;
 }
+
+
+module.exports = {
+  getBuildSummary,
+  getBuildSummaryMarkDown,
+  getBuildSumaryDetails,
+  getParseBuildSummary,
+  POLICY_COMPLIANCE
+};

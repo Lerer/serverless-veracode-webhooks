@@ -11,7 +11,7 @@ const STATUS = {
 };
 
 const getBuildInfo = async (appLegacyId,sandboxLegacyId) => {
-    console.log('getBuildInfo');
+    console.log('getBuildInfo - START');
     let jsonBuildInfo = {};
     let params = {
         'app_id':appLegacyId+''
@@ -28,17 +28,17 @@ const getBuildInfo = async (appLegacyId,sandboxLegacyId) => {
         );
         const buildInfo = response.data;
         xml2js.parseString(buildInfo,{explicitArray:false,trim:true},(err,result)=> {
-            console.log('printing result');
+            console.log('getBuildInfo - printing result');
             console.log(result.buildinfo.build);
             //console.log(result.buildinfo.build[0].analysis_unit);
             jsonBuildInfo = result.buildinfo.build;
-            console.log('finish printing results');
+            console.log('getBuildInfo - finish printing results');
         });
 
     } catch (error) {
         console.error(error.response);
     }
-    console.log('end getBuildInfo');
+    console.log('getBuildInfo - END');
     return jsonBuildInfo;
 }
 

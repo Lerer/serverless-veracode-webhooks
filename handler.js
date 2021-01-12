@@ -34,14 +34,14 @@ exports.checkScanStatus = (event,context,callback) => {
 			   DataType: "String",
 			   StringValue: "GitHub"
 		 },
-		 "Target": {
-			   DataType: "String",
-			   StringValue: "Veracode SAST"
-		 },
-		 "Check_Interval": {
-			DataType: "Number",
-			StringValue: "4"
-		},
+		//  "Target": {
+		// 	   DataType: "String",
+		// 	   StringValue: "Veracode SAST"
+		//  },
+		//  "Check_Interval": {
+		// 	DataType: "Number",
+		// 	StringValue: "4"
+		// },
 		"appGUID": {
 			DataType: "String",
 			StringValue: event.pathParameters.appGUID

@@ -19,12 +19,12 @@ const request = (inputMethod,host,path, params) => {
         {   
             if(index > 0)
                 queryString += '&';
-            console.log(params[keys[key]]);
+            //console.log(params[keys[key]]);
             queryString += keys[key] + '=' + (params[keys[key]]).replace(/\s/g, "+");// params[keys[key]];
             index++;
         }
     }
-    console.log('before Axios.request');
+    //console.log('before Axios.request');
     const authHeader = veracodeHmac.generateHeader(
         credHandler.getApiId()||'', 
         credHandler.getApiKey()||'', 

@@ -16,7 +16,6 @@ exports.webhookListen = (event,context,callback) => {
     const body = JSON.parse(event.body); 
     body.github_event = event.headers['x-github-event'];
     //console.log(body);
-    //console.log(typeof body);
     if (!body.repository || !body.repository.owner || !body.data) {
         //console.log(event);
         return callback(null, {
@@ -26,9 +25,8 @@ exports.webhookListen = (event,context,callback) => {
 			statusCode: 400,
 			body: "Not the right event"
 	  	});
-        //const check = checkRun.createNewCheckRun(body.repository.owner.login,body.repository.name,body.data.commit);
-        //console.log(`check: ${check}`);
-    } else {
+
+	} else {
         console.log('Event for Github scan check');
     }
 
@@ -37,14 +35,6 @@ exports.webhookListen = (event,context,callback) => {
 			   DataType: "String",
 			   StringValue: "GitHub"
 		 },
-		 "Target": {
-			   DataType: "String",
-			   StringValue: "Veracode SAST"
-		 },
-		 "Check_Interval": {
-			DataType: "Number",
-			StringValue: "4"
-		},
 		// "appGUID": {
 		// 	DataType: "String",
 		// 	StringValue: event.pathParameters.appGUID

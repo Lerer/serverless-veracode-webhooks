@@ -4,17 +4,15 @@ const { Octokit } = require("@octokit/rest");
 const { createAppAuth } = require("@octokit/auth-app");
 const fs = require('fs');
 const checkRunHandler = require("../util/apis/github/checkRun");
+const buildSummaryHandler = require("../util/apis/veracode/buildSummary");
+
 
 // const octokit = new Octokit({
 //   auth: "mypersonalaccesstoken123",
 // });
 
 
-const testCommitComment = () => {
-    
-}
-
-const testIssuesList = async () => {
+const testCreateIssueComment = async () => {
     var pem = fs.readFileSync('./test-veracode-with-lambda.2021-01-03.private-key.pem', 'utf8');
   
     const appOctokit = new Octokit({
@@ -57,19 +55,28 @@ const testIssuesList = async () => {
     }
 };
 
-const testUpdateCheckrun = () => {
-    const updateCheckResponse = checkRunHandler.updateCheckRun('Lerer','veracode-async',1666740521,{
+const testUpdateCheckrun = async () => {
+    // const summary = await buildSummaryHandler.getBuildSummary('6cb54471-ed14-4ebc-a1a7-54987a40dcb4',undefined,'10288400') 
+    // console.log(summary);
+    // const summaryMD = buildSummaryHandler.getBuildSummaryMarkDown(summary);
+    // const textMD = buildSummaryHandler.getBuildSumaryDetails(summary);
+    // console.log(textMD);
+    // console.log(summaryMD);
+    const parsedSummary = await buildSummaryHandler.getParseBuildSummary('6cb54471-ed14-4ebc-a1a7-54987a40dcb4',undefined,'10288400');
+    const updateCheckResponse = await checkRunHandler.updateCheckRun('Lerer','veracode-async',1666740521,{
         status: 'completed',
         conclusion: 'neutral',
         output: {
-            summary: 'scan finished',
-            title: 'Veracode SAST Scan check',
-            text: 'this is the text element'
+            summary: parsedSummary.summaryMD,
+            title: checkRunHandler.TEST_RUN_TITLE,
+            text: parsedSummary.textMD
         }
     });
+    
+    // const updateCheckResponse = await checkRunHandler.closeCheckRun('6cb54471-ed14-4ebc-a1a7-54987a40dcb4',undefined,'10288400',1666740521);
     console.log(updateCheckResponse);
 }
 
 
-//testIssuesList();
+//testCreateIssueComment();
 testUpdateCheckrun();

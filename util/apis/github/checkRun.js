@@ -8,6 +8,8 @@ const installationId = process.env.GITHUB_APP_INSTALL_ID;
 const begin = '-----BEGIN RSA PRIVATE KEY-----';
 const end = '-----END RSA PRIVATE KEY-----';
 
+const TEST_RUN_TITLE = 'Veracode Static Scan Results';
+
 const getAuthApp = async () => {
     console.log('getAuthApp - START');
     var pem = process.env.PEM;
@@ -81,6 +83,26 @@ const updateCheckRun = async (owner,repo,checkRunId,input) => {
     return check;
 }
 
+const closeCheckRun = async (appGUID,sandboxGUID, buildId, checkRunId) => {
+    const summary = await buildSummaryHandler.getBuildSummary(appGUID,sandboxGUID,buildId);
+    //console.log(summary);
+    const summaryMD = buildSummaryHandler.getBuildSummaryMarkDown(summary);
+    const textMD = buildSummaryHandler.getBuildSumaryDetails(summary);
+    console.log(textMD);
+    console.log(summaryMD);
+    const updateCheckResponse = await checkRunHandler.updateCheckRun('Lerer','veracode-async',checkRunId,{
+        status: 'completed',
+        // todo - update conclusion
+        conclusion: 'neutral',
+        output: {
+            summary: summaryMD,
+            title: TEST_RUN_TITLE,
+            text: textMD
+        }
+    });
+    return updateCheckResponse;
+};
+
 const listRepoIssue = async () => {
     console.log('listRepoIssue - START');
    
@@ -131,5 +153,7 @@ module.exports = {
     listRepoIssue,
     createCheckRun,
     baseSQSMessageFromGithubEvent,
-    updateCheckRun
+    updateCheckRun,
+    closeCheckRun,
+    TEST_RUN_TITLE
 }
