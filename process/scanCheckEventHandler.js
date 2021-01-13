@@ -31,40 +31,6 @@ const SCAN_CHECK_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCO
 //const GITHUB_REPORT_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/GithubReportBack`;
 
 /*
-check for :
-
-2021-01-11T14:53:37.860Z	9dffc5d0-7c9c-5781-9cb6-9da614345ff5	INFO	{
-  '$': {
-    version: '477789568',
-    build_id: '10322218',
-    submitter: 'Yaakov Lerer',
-    platform: 'Not Specified',
-    lifecycle_stage: 'Not Specified',
-    results_ready: 'true',
-    policy_name: 'test conditional pass',
-    policy_version: '1',
-    policy_compliance_status: 'Calculating...',
-    policy_updated_date: '2021-01-11T09:49:37-05:00',
-    rules_status: 'Calculating...',
-    grace_period_expired: 'true',
-    scan_overdue: 'false',
-    legacy_scan_engine: 'false'
-  },
-  analysis_unit: {
-    '$': {
-      analysis_type: 'Static',
-      published_date: '2021-01-11T09:53:27-05:00',
-      published_date_sec: '1610376807',
-      status: 'Results Ready',
-      engine_version: '20201206173220'
-    }
-  }
-}
-
-*/
-
-
-/*
  handle ScanCheck event
  - iterate on the records captured:
 	- if no lagacy id - resolve and requeue
@@ -102,27 +68,38 @@ const handleEvent = async (customEvent) => {
 			}
 
 			// report and create a new check-run
-			const sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(record.body);
-			const newCheckRun = await checkRun.createCheckRun(
-				sqsBaseMessage.repository_owner_login,
-				sqsBaseMessage.repository_name,
-				sqsBaseMessage.commit_sha);
-			console.log('New check run created');
-			console.log(newCheckRun);
-
-			// Adding the check run id to the sqs attributes
-			eventAttrs.checkRunID = {
-				dataType: "Number",
-				stringValue: newCheckRun.data.id + ''
+			let sqsBaseMessage;
+			if (recordBody.github_event === 'push') { 
+				sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(recordBody);
+			} else if (recordBody.github_event === 'pull_request') {
+				sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(recordBody);
+				sqsBaseMessage.commit_sha = recordBody.pull_request.head.sha;
 			}
-			// requeue with lagacy ID
-			console.log(eventAttrs);
 
-			// re-queue with the lagacy ids;
-			await requeueMessage(eventAttrs,RECHECK_ACTION.SCANNING,JSON.stringify({...newCheckRun,...sqsBaseMessage}),SCAN_CHECK_QUEUE_URL);
+			if (sqsBaseMessage && sqsBaseMessage !== null) {
+				const newCheckRun = await checkRun.createCheckRun(
+					sqsBaseMessage.repository_owner_login,
+					sqsBaseMessage.repository_name,
+					sqsBaseMessage.commit_sha);
+				console.log('New check run created');
+				console.log(newCheckRun);
 
+				// Adding the check run id to the sqs attributes
+				eventAttrs.checkRunID = {
+					dataType: "Number",
+					stringValue: newCheckRun.data.id + ''
+				}
+				// requeue with lagacy ID
+				console.log(eventAttrs);
 
-			console.log('Finish updating with lagacy ids and requeue for scan check');
+				// re-queue with the lagacy ids;
+				await requeueMessage(eventAttrs,RECHECK_ACTION.SCANNING,JSON.stringify({/*...newCheckRun,*/...sqsBaseMessage,check_run_id:newCheckRun.data.id}),SCAN_CHECK_QUEUE_URL);
+				
+				console.log('Finish updating with lagacy ids and requeue for scan check');
+			} else {
+				console.log(`Un supported github event type: ${recordBody.github_event}`);
+			}
+
 		} else {
 			console.log('Starting to check for build info');
 			// we can start the check of the build status
@@ -147,7 +124,7 @@ const handleEvent = async (customEvent) => {
 					sqsBaseMessage.repository_name,
 					checkRunID,{
 						status: 'completed',
-						conclusion: 'skipped',
+						conclusion: checkRun.CONCLUSION.SKIPPED,
 						output: {
 							summary: 'Issue with calculating recheck time. Bailing out!',
 							title: checkRunHandler.TEST_RUN_TITLE,
@@ -164,34 +141,36 @@ const handleEvent = async (customEvent) => {
 				console.log('===  record body start on finish ===')
 				console.log(recordBody);
 				console.log('===  record body finish on finish ===')
-				///  orgID,appID,appGUID,sandboxGUID,buildId
-				const parsedSummary = await buildSummaryHandler.getParseBuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
-				console.log(parsedSummary);
+				// review compliance status
 				const complianceStatus = buildInfo['$'].policy_compliance_status;
-				const conclusion = calculateConclusion(complianceStatus,sandboxGUID); 
-				console.log(`Current scan conclusion: '${conclusion}'`);
-				const checkRunFinished = await checkRun.updateCheckRun(
-					recordBody.repository_owner_login,
-					recordBody.repository_name,
-					recordBody.data.id,
-					{	
-						status: 'completed',
-						conclusion,
-						output: {
-							summary: parsedSummary.summaryMD,
-							title: checkRun.TEST_RUN_TITLE,
-							text: parsedSummary.textMD
-						}
-					});
-				console.log('Check run => updated with a complete status');
-				console.log(checkRunFinished);
-				
+				// only update if needed
+				if (!recordBody.pre_calculated_updated || complianceStatus!==buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
+					const parsedSummary = await buildSummaryHandler.getParseBuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
+					console.log(parsedSummary);
+					const conclusion = calculateConclusion(complianceStatus,sandboxGUID); 
+					console.log(`Current scan conclusion: '${conclusion}'`);
+					const checkRunFinished = await checkRun.updateCheckRun(
+						recordBody.repository_owner_login,
+						recordBody.repository_name,
+						recordBody.check_run_id,
+						{	
+							status: 'completed',
+							conclusion,
+							output: {
+								summary: parsedSummary.summaryMD,
+								title: checkRun.TEST_RUN_TITLE,
+								text: parsedSummary.textMD
+							}
+						});
+					console.log('Check run => updated with a complete status');
+					console.log(checkRunFinished);
+				}
 				// if policy is not calculated, requeue again
 				if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
 					await requeueMessage(
 						eventAttrs,
 						RECHECK_ACTION.AWAITING_POLICY_CALCULATION,
-						JSON.stringify({...recordBody,previous_scan_status:buildInfoHandler.STATUS.RESULT_READY}),
+						JSON.stringify({...recordBody,previous_scan_status:buildInfoHandler.STATUS.RESULT_READY,pre_calculated_updated: true}),
 						SCAN_CHECK_QUEUE_URL);
 					console.log('Scan check finish - Re-queue for recheck as policy is being calculated');
 				} else {
@@ -203,10 +182,10 @@ const handleEvent = async (customEvent) => {
 				const checkRunFailed = await checkRun.updateCheckRun(
 					recordBody.repository_owner_login,
 					recordBody.repository_name,
-					recordBody.data.id,
+					recordBody.check_run_id,
 					{	
 						status: 'completed',
-						conclusion: 'failure',
+						conclusion: checkRun.CONCLUSION.FAILURE,
 						output: {
 							summary: `Unknow scan status: ${buildInfo.analysis_unit['$'].status}`,
 							title: checkRun.TEST_RUN_TITLE
@@ -223,7 +202,7 @@ const handleEvent = async (customEvent) => {
 					const checkRunUpdate = await checkRun.updateCheckRun(
 						recordBody.repository_owner_login,
 						recordBody.repository_name,
-						recordBody.data.id,
+						recordBody.check_run_id,
 						{	
 							status: reportingStatus.status,
 							conclusion: reportingStatus.conclusion,
@@ -233,6 +212,7 @@ const handleEvent = async (customEvent) => {
 								text: `Veracode scan status update: ${buildInfo.analysis_unit['$'].status}`
 							}
 						});
+					console.log(checkRunUpdate);
 					console.log('Github check run updated');
 				}
 				// any other rescan action
