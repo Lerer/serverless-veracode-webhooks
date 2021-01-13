@@ -30,7 +30,33 @@ const getSandbox = async (appGUID,sandboxGUID) => {
     return application;
 }
 
+const getSandboxByName = async (appGUID,sandboxName) => {
+    console.info('getSandboxByName - START');
+    let sandbox = {};
+    try {
+        const response = await apiUtil.request('GET','api.veracode.com',`/appsec/v1/applications/${appGUID}/sandboxes`,null);
+        let sandboxes = response.data;
+        if (sandboxes._embedded && sandboxes._embedded.sandboxes) {
+            sandboxes = sandboxes._embedded.sandboxes.filter((sandbox) => {
+                return (sandbox.name === sandboxName);
+            })
+        }
+        if (sandboxes.length===1){
+            sandbox = sandboxes[0];
+        } else {
+            console.info(`getSandboxByName - Could not find the sandbox ny name [${sandboxName}]`);
+            console.log(response.data);
+        }
+        console.log(sandbox);
+    } catch (error) {
+        console.error(error);
+    }
+    console.info('getSandboxByName - END');
+    return sandbox;
+}
+
 module.exports = {
     getSandboxByGUID : getSandbox,
-    getSandboxesByAppGUID : getSandboxes
+    getSandboxesByAppGUID : getSandboxes,
+    getSandboxByName
 }

@@ -35,21 +35,13 @@ exports.webhookListen = (event,context,callback) => {
 			   DataType: "String",
 			   StringValue: "GitHub"
 		 },
-		// "appGUID": {
-		// 	DataType: "String",
-		// 	StringValue: event.pathParameters.appGUID
-        // },
-        "appName": {
+		"appName": {
             DataType: "String",
             StringValue: body.data.veracode_app_name
         }
-		// "appLegacyID": {
-		// 	DataType: "Number",
-		// 	StringValue: "0"
-		// },
     };
-    
-    if (body.data.veracode_sandbox_name && body.data.veracode_sandbox_name.length() >0) {
+	
+    if (body.data.veracode_sandbox_name && body.data.veracode_sandbox_name.length >0) {
 		msgAttrs.sandboxName = {
 			DataType: "String",
 			StringValue: body.data.veracode_sandbox_name

@@ -39,7 +39,7 @@ provider:
         - sqs:SendMessage
       Resource: 
         - { "Fn::GetAtt" : ["ScanChecks","Arn"]}
-        - { "Fn::GetAtt" : ["GithubReportBack","Arn"]}
+      # - { "Fn::GetAtt" : ["GithubReportBack","Arn"]}
   environment: ${self:custom.settings}
 
 plugins:
@@ -54,20 +54,20 @@ functions:
       - http:
           path: /github
           method: post
-  hello:
-    handler: handler.checkScanStatus
-    memorySize: 128
-    events:
-      - http:
-          path: /checkScanStatus/{appGUID}
-          method: get
-      - http:
-          path: /checkScanStatus/{appGUID}/{sandboxGUID}
-          method: get
-  sqsHello:
+  # hello:
+  #   handler: handler.checkScanStatus
+  #   memorySize: 128
+  #   events:
+  #     - http:
+  #         path: /checkScanStatus/{appGUID}
+  #         method: get
+  #     - http:
+  #         path: /checkScanStatus/{appGUID}/{sandboxGUID}
+  #         method: get
+  veracodeForGithubBuildProcessor:
     handler: handler.sqsSingleScanSample
     memorySize: 128
-    timeout: 8
+    timeout: 12
     events:
       - sqs:
           arn: 
@@ -81,7 +81,7 @@ resources:
       Type: "AWS::SQS::Queue"
       Properties:
         QueueName: "ScanChecks"
-    GithubReportBack:
-      Type: "AWS::SQS::Queue"
-      Properties:
-        QueueName: "GithubReportBack"
+    # GithubReportBack:
+    #   Type: "AWS::SQS::Queue"
+    #   Properties:
+    #     QueueName: "GithubReportBack"

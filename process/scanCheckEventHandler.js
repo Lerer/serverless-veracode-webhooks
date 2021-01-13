@@ -17,9 +17,11 @@ AWS.config.update({region: AWS_REGION});
 const RECHECK_ACTION = {
 	STOP : -1,
 	ERROR: -2,
-	SCANNING: 15,
+	SCANNING: 20,
 	FINISHED: -10,
-	AWAITING_POLICY_CALCULATION: 20
+	AWAITING_POLICY_CALCULATION: 20,
+	LONGER_WAIT: 60,
+	SHORTER_WAIT: 30
 }
 
 // Create an SQS service object
@@ -81,13 +83,15 @@ const handleEvent = async (customEvent) => {
 		const recordBody = JSON.parse(record.body);
 		console.log(recordBody);
 		let response = {};
-		if (!eventAttrs.appLegacyID) {	
+		if (!eventAttrs.appLegacyID) {
+			const sandboxName = eventAttrs.sandboxName ? eventAttrs.sandboxName.stringValue : undefined;
 			//response = await getLagacyIDsFromGUID(eventAttrs.appGUID.stringValue,eventAttrs.sandboxGUID.stringValue || null); 
-			response = await getLagacyIDsFromName(eventAttrs.appName.stringValue,/*eventAttrs.sandboxGUID.stringValue ||*/ null);
+			response = await getLagacyIDsFromName(eventAttrs.appName.stringValue,sandboxName);
 			console.log(response);
 			if (response.appLegacyID && response.appLegacyID.stringValue!=='0') {
 				eventAttrs.appLegacyID = response.appLegacyID;
 				eventAttrs.appGUID = response.appGUID;
+				eventAttrs.orgID = response.orgID;
 			} else {
 				console.log('Error - could not find application id');
 				return;
@@ -151,23 +155,28 @@ const handleEvent = async (customEvent) => {
 						}
 					});
 			} else if (scanRecheckTime === RECHECK_ACTION.FINISHED) {
+				//console.log(eventAttrs);
+				const appID = eventAttrs.appLegacyID.stringValue;
+				const orgID = eventAttrs.orgID.stringValue;
 				const appGUID = eventAttrs.appGUID.stringValue;
+				const sandboxGUID = eventAttrs.sandboxGUID ? eventAttrs.sandboxGUID.stringValue : undefined;
 				// TODO - notify finished scan by updating the status
 				console.log('===  record body start on finish ===')
 				console.log(recordBody);
 				console.log('===  record body finish on finish ===')
-
-				const parsedSummary = await buildSummaryHandler.getParseBuildSummary(appGUID,undefined,eventAttrs.buildID.stringValue);
+				///  orgID,appID,appGUID,sandboxGUID,buildId
+				const parsedSummary = await buildSummaryHandler.getParseBuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
 				console.log(parsedSummary);
 				const complianceStatus = buildInfo['$'].policy_compliance_status;
+				const conclusion = calculateConclusion(complianceStatus,sandboxGUID); 
+				console.log(`Current scan conclusion: '${conclusion}'`);
 				const checkRunFinished = await checkRun.updateCheckRun(
 					recordBody.repository_owner_login,
 					recordBody.repository_name,
 					recordBody.data.id,
 					{	
 						status: 'completed',
-						conclusion: complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.PASS ? 'success' :  
-							complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING ? 'neutral' : 'failure',
+						conclusion,
 						output: {
 							summary: parsedSummary.summaryMD,
 							title: checkRun.TEST_RUN_TITLE,
@@ -207,7 +216,10 @@ const handleEvent = async (customEvent) => {
 			} else if (scanRecheckTime > 0) {
 				// Update if status changed
 				if (buildInfo.analysis_unit['$'].status !== recordBody.previous_scan_status) {
+					console.log(`Status changed from ${recordBody.previous_scan_status} to ${buildInfo.analysis_unit['$'].status} - sending update`)
+					console.log(JSON.stringify(eventAttrs));
 					const reportingStatus = getGithubStatusFromBuildStatus(buildInfo);
+					const sandboxName = (eventAttrs.sandboxName && eventAttrs.sandboxName.stringValue) ? eventAttrs.sandboxName.stringValue : undefined;
 					const checkRunUpdate = await checkRun.updateCheckRun(
 						recordBody.repository_owner_login,
 						recordBody.repository_name,
@@ -217,10 +229,11 @@ const handleEvent = async (customEvent) => {
 							conclusion: reportingStatus.conclusion,
 							output: {
 								title: checkRun.TEST_RUN_TITLE,
-								summary: `Build ${eventAttrs.buildID.stringValue} submitted. Awaiting scan results.`,
+								summary: getStatusChangeSummary(eventAttrs.appName.stringValue,sandboxName, eventAttrs.buildID.stringValue),//`Build ${eventAttrs.buildID.stringValue} submitted. Awaiting scan results.`,
 								text: `Veracode scan status update: ${buildInfo.analysis_unit['$'].status}`
 							}
 						});
+					console.log('Github check run updated');
 				}
 				// any other rescan action
 				console.log(`requeuing message for another check in ${scanRecheckTime} seconds`);
@@ -236,6 +249,28 @@ const handleEvent = async (customEvent) => {
 		//console.log('Finish process event record')
 	}
 	console.log('handleEvent - END')
+}
+
+const calculateConclusion = (complianceStatus, sandboxGUID) => {
+	console.log(`calculateConclusion for : '${complianceStatus}'`)
+	if (sandboxGUID && sandboxGUID !== null && sandboxGUID.length > 0) {
+		return checkRun.CONCLUSION.NATURAL;
+	} else if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.PASS) {
+		return checkRun.CONCLUSION.SUCCESS;
+	} else if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
+		return checkRun.CONCLUSION.NATURAL;
+	} else {
+		return checkRun.CONCLUSION.FAILURE;
+	}
+}
+
+const getStatusChangeSummary = (appName,sandboxName,buildID) => {
+    let summaryHeading = `> Veracode Application: __${appName}__  `;
+    if (sandboxName && sandboxName.length>0) {
+      summaryHeading = `${summaryHeading}\n> Sandbox name: __${sandboxName}__  `;
+	}
+	summaryHeading = `${summaryHeading}\n> Build ${buildID} submitted. Awaiting scan results...`;
+    return summaryHeading;
 }
 
 const getLagacyIDsFromGUID = async (appGUID,sandboxGUID) => {
@@ -292,7 +327,11 @@ const getLagacyIDsFromName = async (appName,sandboxName) => {
 		};
 		retVal.appGUID = {
 			dataType: "String",
-			stringValue: response.guid + ''
+			stringValue: response.guid
+		};
+		retVal.orgID = {
+			dataType: "Number",
+			stringValue: response.oid + ''
 		};
 	} else {
 		// No point to continue if app id is not found
@@ -300,23 +339,23 @@ const getLagacyIDsFromName = async (appName,sandboxName) => {
 		return retVal;
 	}
 
+	console.log(`Sandbox name to look for: ${sandboxName}`);
+	// Identify sandbox details
 	if (sandboxName && sandboxName!==null && sandboxName.length>0) {
+		let sandboxInfo = await sandboxHandler.getSandboxByName(response.guid,sandboxName);
+		if (sandboxInfo.id) {
+			retVal.sandboxLegacyID = {
+				dataType: "Number",
+				stringValue: sandboxInfo.id + ''
+			};
+			retVal.sandboxGUID = {
+				dataType: "String",
+				stringValue: sandboxInfo.guid
+			};
+		}
 		// TODO - add sandbox referance
 	}
 
-	// if (sandboxGUID && sandboxGUID!=null) {
-	// 	// get the sandbox id
-	// 	response = await sandboxHandler.getSandboxByGUID(appGUID,sandboxGUID);
-	// 	if (response.id) {
-	// 		console.log(`adding sandbox legacy id: ${response.id}`);
-	// 		retVal.sandboxLegacyID = {
-	// 			dataType: "Number",
-	// 			stringValue: response.id + ''
-	// 		}
-	// 	} else {
-	// 		console.log('no id parameter in the response for get sandbox by guid');
-	// 	}
-	// }
 	return retVal
 }
 
@@ -337,10 +376,7 @@ const getLatestBuildStatus = async (eventAttrs) => {
 const requeueMessage = async (msgAttrs,delay,msgBody,queueUrl) => {
 	console.log('requeueMessage - START');
 	// send a message to the queue
-	//console.log(msgBody.length);
-	//if (msgBody.length >262140) {
-	console.log(msgBody);
-	//}
+	//console.log(msgBody);
 
 	var sqsPayload = {
 		// Remove DelaySeconds parameter and value for FIFO queues
@@ -377,14 +413,14 @@ const calculateRescanTimeFromAnalysisUnit = (analysisUnit) => {
 				scanRecheckTime = RECHECK_ACTION.FINISHED;
 				break;
 			case buildInfoHandler.STATUS.INCOMPLETE:
-				scanRecheckTime = 60;
+				scanRecheckTime = RECHECK_ACTION.LONGER_WAIT;
+				break;
+			case buildInfoHandler.STATUS.SUBMITTED_TO_SCAN:
+				scanRecheckTime = RECHECK_ACTION.SHORTER_WAIT;
 				break;
 			case buildInfoHandler.STATUS.PRESCAN_SUBMITTED:
-			case buildInfoHandler.STATUS.SUBMITTED_TO_SCAN:
-				scanRecheckTime = 30;
-				break;
 			case buildInfoHandler.STATUS.PRESCAN_FINISHED:
-				scanRecheckTime = 60;
+				scanRecheckTime = RECHECK_ACTION.LONGER_WAIT;
 				break;
 			case buildInfoHandler.STATUS.SCAN_IN_PROGRESS:
 				scanRecheckTime = RECHECK_ACTION.SCANNING;

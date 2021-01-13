@@ -10,6 +10,16 @@ const end = '-----END RSA PRIVATE KEY-----';
 
 const TEST_RUN_TITLE = 'Veracode Static Scan Results';
 
+const CONCLUSION = {
+    SUCCESS : 'success', 
+    FAILURE: 'failure',
+    NATURAL:  'neutral', 
+    CANCELLED: 'cancelled', 
+    SKIPPED: 'skipped', 
+    TIME_OUT: 'timed_out', 
+    ACTION_REQUIRED: 'action_required'
+}
+
 const getAuthApp = async () => {
     console.log('getAuthApp - START');
     var pem = process.env.PEM;
@@ -155,5 +165,6 @@ module.exports = {
     baseSQSMessageFromGithubEvent,
     updateCheckRun,
     closeCheckRun,
-    TEST_RUN_TITLE
+    TEST_RUN_TITLE,
+    CONCLUSION
 }

@@ -4,7 +4,8 @@ const POLICY_COMPLIANCE = {
   PASS: 'Pass',
   DID_NOT_PASS: 'Did Not Pass',
   CONDITIONAL_PASS:'Conditional Pass',
-  CALCULATING: 'Calculating...'
+  CALCULATING: 'Calculating...',
+  NOT_ASSESSED: 'Not Assessed'
 }
 
 const getBuildSummary = async (appGUID,sandboxGUID,buildId) => {
@@ -36,18 +37,18 @@ const getBuildSummary = async (appGUID,sandboxGUID,buildId) => {
     return jsonBuildSummary;
 }
 
-const getParseBuildSummary = async (appGUID,sandboxGUID,buildId) => {
+const getParseBuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buildInfo) => {
   const response = {
     summary: {},
-    summaryMD: '',
-    textMD: ''
+    summaryMD: 'N/A',
+    textMD: 'Could not fetch build summary!'
   };
   const summary = await getBuildSummary(appGUID,sandboxGUID,buildId);
   //console.log(summary);
   response.summary = summary;
-  if (summary && summary['static-analysis'].published_date && summary['static-analysis'].published_date.length>0) {
-    
-    const summaryMD = getBuildSummaryMarkDown(summary);
+  if (summary && summary['static-analysis'] && summary['static-analysis'].published_date && summary['static-analysis'].published_date.length>0) {
+    const reportLink = `[View Report](https://analysiscenter.veracode.com/auth/index.jsp#ViewReportsResultSummary:${orgID}:${appID}:${buildId})`;
+    const summaryMD = getBuildSummaryMarkDown(summary,reportLink,buildInfo);
     const textMD = getBuildSumaryDetails(summary);
     response.summaryMD = summaryMD;
     response.textMD = textMD;
@@ -60,18 +61,30 @@ const getParseBuildSummary = async (appGUID,sandboxGUID,buildId) => {
   return response;
 };
 
-const getBuildSummaryMarkDown = (buildSummary) => {
+const getBuildSummaryMarkDown = (buildSummary,reportLink,buildInfo) => {
+    let sandbox = false;
+    const policyComplianceStatus = (buildInfo && buildInfo['$'] && buildInfo['$'].policy_compliance_status) ? 
+      buildInfo['$'].policy_compliance_status :
+      buildSummary.policy_compliance_status;
     let summaryHeading = `> Veracode Application: __${buildSummary.app_name}__  `;
+    if (buildSummary.sandbox_name && buildSummary.sandbox_name.length>0) {
+      sandbox = true;
+      summaryHeading = `${summaryHeading}\n> Sandbox name: __${buildSummary.sandbox_name}__  `;
+    }
     summaryHeading = `${summaryHeading}\n> Policy name: __${buildSummary.policy_name}__  `;
-    summaryHeading = `${summaryHeading}\n> Compliance status: __${buildSummary.policy_compliance_status}__   \n`;
+    if (!sandbox) {
+      summaryHeading = `${summaryHeading}\n> Compliance status: __${policyComplianceStatus}__   \n`;
+    } else {
+      summaryHeading = `${summaryHeading}\n> Compliance status: __${POLICY_COMPLIANCE.NOT_ASSESSED}__   \n`;
+    }
 
-    const icon = policyIconMd(buildSummary.policy_compliance_status);
+    const icon = policyIconMd(policyComplianceStatus);
 
     const summary = parseSummary(buildSummary.severity);
     const changes = parseChanges(buildSummary['flaw-status']);
 
     // console.log(summary);
-    let outputSummary = `${summaryHeading}  \n  ${icon}  \n  ${summary}  \n\n  ${changes}`;
+    let outputSummary = `${summaryHeading}  \n  ${(!sandbox) ? icon : ''} \n  ${reportLink}  \n  ${summary}  \n\n  ${changes}`;
 
     return outputSummary;
 }

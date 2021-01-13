@@ -55,7 +55,7 @@ const getApplicationByName = async (appName) => {
         try {
             const response = await apiUtil.request('GET','api.veracode.com','/appsec/v1/applications', {'name':appName});
             let applications = response.data;
-            console.log(applications);
+            
             if (response.data._embedded && response.data._embedded.applications) {
                 applications = response.data._embedded.applications.filter((app) => {
                     return (app.profile.name === appName);
@@ -63,6 +63,9 @@ const getApplicationByName = async (appName) => {
             }
             if (applications.length===1){
                 application = applications[0];
+            } else {
+                console.info(`getApplicationByName - Could not find the application ny name [${appName}]`);
+                console.log(response.data);
             }
             console.log(application);
         } catch (error) {
