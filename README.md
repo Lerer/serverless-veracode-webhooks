@@ -3,6 +3,8 @@
 ## Purpose
 The purpose of the repository is to enable customers who want to use the full veracode Static scan (not the Pipeline or the IDE scans) and get updates back in an asynchronious method.
 
+> Limitation - The solution supports only GitHub workflow triggers `push` and `pull_request`.
+
 ## The implementation
 The repository contains an implementation of SERVERLESS framework which can deploy a set of (24) resources in a chosen AWS region.
 resources:  
@@ -27,7 +29,6 @@ To utilize the content, you will need to implement the following:
 4) Create a Github Application Definition      
 5) __WIP__ - Create an AWS Secret to encrypt and store few attributes
 6) Clone the repository and update few attributes
-<!-- 6) Create an AWS Secret to encrypt and store few attributes ) -->
 7) Deploy the stack with 'serverless deploy'
 8) Configure your repositories pipeline to call the notifier
 
@@ -115,11 +116,11 @@ WIP - Will update once is ready
 4. If you choose to skip the previous step, comment out (using # in front of the line) attributes `app` and `org` in your `serverless.yml`.
 
 
-### 7. And finally - deploy the solution to AWS 
+### 7. Deploy the solution to AWS 
 * Run the deployment command: __`serverless deploy`__
 * Pay attenbtion to the deployment output for error
-* look for the `Service Information` section and note the `endpoint` which should look asimilar to follow: 
-  * POST - https://kjhkjhz7l8.execute-api.ap-southeast-2.amazonaws.com/dev/github
+* look for the `Service Information` section and note the `endpoint` which should look similar to: 
+  * `POST - https://kjhkjhz7l8.execute-api.ap-southeast-2.amazonaws.com/dev/github`
 
 ### 8. Configure your repositories pipeline to call the notifier
 The following steps will take you through the GitHub workflow configuration to call the deployed solution.
