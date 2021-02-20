@@ -24,11 +24,12 @@ To utilize the content, you will need to implement the following:
 1) Install NodeJS, NPM, and the [Serverless Framework]('https://www.serverless.com/framework/docs/getting-started/' 'Serverless Framework')
 2) Creation of AWS deployment role
 3) Configure the Serverless Framework to your AWS Account (using the pre-defined deployment role)
-4) Create a Github Application - simple than it sound
-5) Clone the repository and update few attributes
-6) Create an AWS Secret to encrypt and store few attributes 
+4) Create a Github Application Definition      
+5) __WIP__ - Create an AWS Secret to encrypt and store few attributes
+6) Clone the repository and update few attributes
+<!-- 6) Create an AWS Secret to encrypt and store few attributes ) -->
 7) Deploy the stack with 'serverless deploy'
-8) Configure your repositories to call the notifier
+8) Configure your repositories pipeline to call the notifier
 
 ## Installation details:
 ### 1. install NodeJS, NPM, and Serverless
@@ -50,5 +51,108 @@ Get your own policy using online generator:
 Once a policy added to the AWS account, create a user with the newly create policy. That user will be used by our Serverless framework to create all required resources.
    
       
-      
 ### 3. Configure Serverless to deploy to your AWS account
+
+Serverless framework has few options to configure it. The method I tested was a manual deployment from my desktop. If you plan to actively develop further the code here, you may want to look into setting CI/CD inside Serverless
+
+0) login to Serverless is a step in stage #1. If you have done so, please complete that step
+1) Create an AWS account for Serverless using the policy created in the previous stage: [Creating an IAM user in your AWS account
+](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)
+
+<br>
+
+## Note - Due to the cyclic dependency and configuration, we will do a bit back and front between GitHub and AWS in the next set of instructions      
+<br>          
+
+### 4. The GitHub Application
+Now that we have the AWS account pre-set, linked to Serverless - we are ready to deploy. However, in order to provide access back to GitHub, we need to enable permissions.    
+We will do that by creating an Application in the GitHub account.
+
+1. In your Github account, create an application using the following instructions [Creating a GitHub App](https://docs.github.com/en/developers/apps/creating-a-github-app)     
+   * Name: "`My Veracode`"
+   * Homepage: "`http://www.veracode.com`"
+   * Uncheck the `Active` checkbox in the Webhook section
+   * Permissions:
+     * Checks: `Read & Write`
+     * Issues: Read & Write
+     * Metadata: `Read-only`
+     * Pull request: Read-only
+     * Webhooks: Read-only
+2. Make a note of the GitHub Application ID as we will need it to configure our solution.
+   * See `App ID: <XXXXXX>` at the `General` -> `about` section of the application you just created 
+3. Genrate a private key for the application and save it. We will need it to get our serverless solution access to the repositories.
+   * Use the following instructions: [Generating a private key](https://docs.github.com/apps/building-github-apps/authentication-options-for-github-apps/#generating-a-private-key)
+4. Install the application you created
+   * At the application settings, click on install App
+   * Select either `All repositories`, or `Only select repositories`. 
+     * If you decide to work with selected repository, you will have to maintain the list of allowed repositories.
+   * Make a note for the `installation id` which can be found at the installation configuration URL 
+     * navigate to your github account settings
+     * Select `Applications`
+     * Click on the `Configure` button for the application you created and installed
+     * The page URL will look as follow: `http://github.com/settings/installations/XXXXXXXX`. The number at the end of the URL path is you `installation id`
+
+### 5. Create an AWS Secret to encrypt and store few attributes
+WIP - Will update once is ready
+
+### 6. Clone, Update and Deploy
+1. Clone this repository: ``
+2. Copy `empty.env` to `.env` and update the attributes
+   * API_ID=[Veracode API Key]
+   * API_KEY=[Veracode API Secret]
+   * PEM=[content of the private key created at #4.3.]
+     * The format will be `-----BEGIN RSA PRIVATE KEY----- MIIEpAIBAAKASJEAn08WHUF27jUocPGwVVLxOo.. ... I2l3ZJctx5YsxHhtFvA8jFdsRDYe0Oz66Nt2453PEIF42fH26gtLjFSbrKrxGcti 4Or54WvL0y2+UXi5pQkcvoaMfa4yx61blSqZAQw1a4aWLGyz+8AvAg== -----END RSA PRIVATE KEY-----`.
+     * __Single space__ separated and __NOT__ newline separated! 
+   * GITHUB_APP_ID=[Application ID gathered at #4.2]
+   * GITHUB_APP_INSTALL_ID=[Application installation ID gathered at #4.4]
+3. (Optional) If you logged in to the SERVERLESS dashboard (free), and would like to view and monior API endpoint and functions invocation:
+   * Login to your Serverless account 
+   * Create an application. When asked for template, select `serverless framework`. 
+     * Note the `application name`
+   * Modify your `serverless.yml` file in the solution directory and override the following:
+     * app: [Your new `application name`]
+     * org: [Your SERVERLESS account id as shown on your dashboard]
+4. If you choose to skip the previous step, comment out (using # in front of the line) attributes `app` and `org` in your `serverless.yml`.
+
+
+### 7. And finally - deploy the solution to AWS 
+* Run the deployment command: __`serverless deploy`__
+* Pay attenbtion to the deployment output for error
+* look for the `Service Information` section and note the `endpoint` which should look asimilar to follow: 
+  * POST - https://kjhkjhz7l8.execute-api.ap-southeast-2.amazonaws.com/dev/github
+
+### 8. Configure your repositories pipeline to call the notifier
+The following steps will take you through the GitHub workflow configuration to call the deployed solution.
+> Important - this step will only work if you configure the workflow for a repository which is permitted access when you install the GitHub application __#4.4__
+
+Since the solution _act as_ asynchronic WebHook, we can send a full scan to the Veracode platform without waiting for it to complete.
+
+   * Add the following attributes as repository SECRET
+     * `WEBHOOK_SECRET` - Secret for github webhook
+   * In your Github workflow configuration, use the official __[upload-and-scan](https://github.com/marketplace/actions/veracode-upload-and-scan)__ action to trigger a full scan
+   * When you configure the above __action__, set:
+     * `version: ${{ github.run_id }}`
+     * `scantimeout: 0`
+   * immidiatly after the upload and scan configure the following __action__
+     ```yml
+       - name: Invoke deployment hook
+         uses: distributhor/workflow-webhook@v1
+         env:
+           webhook_type: 'json-extended'
+           webhook_url: <WEBHOOK_URL>  // the endpoint URL collected at stage 7
+           webhook_secret: ${{ secrets.WEBHOOK_SECRET }}
+           data: '{"commit":"${{github.sha}}","run_id":"${{github.run_id}}","run_number":"${{github.run_number}}","veracode_app_name":"veracode-async"}' 
+           #"veracode_sandbox_name":"lets see if it works 3"}'
+      ```
+
+      The `data` attribute is a <ins>__single line__</ins> of the following JSON:
+
+      ```json
+      {
+        "commit": "${{github.sha}}", // or the scan name
+        "run_id":"${{github.run_id}}", // The run id to report back the results
+        "run_number":"${{github.run_number}}", // the run number in case of re-run
+        "veracode_app_name":"veracode-async", // The application name
+        "veracode_sandbox_name":"Sandbox 1" // The sandbox name. Don't include if using policy scan!
+      }
+      ```

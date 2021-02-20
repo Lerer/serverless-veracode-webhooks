@@ -1,16 +1,19 @@
-service: sls-sqs-keys
+service: github-status-check
 # app and org for use with dashboard.serverless.com
-app: sls-sqs-keys-app
+app: my-veracode
 org: yaakovlerer
 
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
 frameworkVersion: '2'
 
+useDotenv: true
+
 package:
   exclude:
     - test/**
     - '**/*.test.js'
+    - 'empty.env'
 
 custom:
   prod:
@@ -23,24 +26,36 @@ custom:
     ACCOUNT_ID: "#{AWS::AccountId}"
     TARGET_REGION: ${self:provider.region}
     logLevel: ${self:custom.${self:provider.stage}.LogLevel}
-    GITHUB_APP_ID: 94775
-    GITHUB_APP_INSTALL_ID: 13893866
+    GITHUB_APP_ID: ${env:GITHUB_APP_ID}
+    GITHUB_APP_INSTALL_ID: ${env:GITHUB_APP_INSTALL_ID}
+    #API_ID: ${env:API_ID}
+    PEM: ${env:PEM}
+    #API_KEY: ${env:API_KEY}
 
 provider:
   name: aws
   runtime: nodejs12.x
-  stage: ${opt:stage, 'dev'}
+  #stage: ${opt:stage, 'dev'}
   region: ap-southeast-2
   apiGateway:
     shouldStartNameWithService: true
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - sqs:SendMessage
-      Resource: 
-        - { "Fn::GetAtt" : ["ScanChecks","Arn"]}
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - sqs:SendMessage
+          Resource: 
+            - { "Fn::GetAtt" : ["ScanChecks","Arn"]}
+  #iamRoleStatements:
+  #  - Effect: "Allow"
+  #    Action:
+  #      - sqs:SendMessage
+  #    Resource: 
+  #      - { "Fn::GetAtt" : ["ScanChecks","Arn"]}
       # - { "Fn::GetAtt" : ["GithubReportBack","Arn"]}
   environment: ${self:custom.settings}
+  lambdaHashingVersion: 20201221
 
 plugins:
   - serverless-pseudo-parameters
@@ -68,6 +83,9 @@ functions:
     handler: handler.sqsSingleScanSample
     memorySize: 128
     timeout: 12
+    environment:
+      API_ID: ${env:API_ID}
+      API_KEY: ${env:API_KEY}
     events:
       - sqs:
           arn: 
@@ -81,7 +99,3 @@ resources:
       Type: "AWS::SQS::Queue"
       Properties:
         QueueName: "ScanChecks"
-    # GithubReportBack:
-    #   Type: "AWS::SQS::Queue"
-    #   Properties:
-    #     QueueName: "GithubReportBack"
