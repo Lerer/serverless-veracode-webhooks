@@ -81,21 +81,26 @@ const handleEvent = async (customEvent) => {
 					sqsBaseMessage.repository_owner_login,
 					sqsBaseMessage.repository_name,
 					sqsBaseMessage.commit_sha);
-				console.log('New check run created');
+				console.log('New check run requested');
 				console.log(newCheckRun);
 
-				// Adding the check run id to the sqs attributes
-				eventAttrs.checkRunID = {
-					dataType: "Number",
-					stringValue: newCheckRun.data.id + ''
-				}
-				// requeue with lagacy ID
-				console.log(eventAttrs);
+				if (newCheckRun) {
+					// Adding the check run id to the sqs attributes
+					eventAttrs.checkRunID = {
+						dataType: "Number",
+						stringValue: newCheckRun.data.id + ''
+					}
+					// requeue with lagacy ID
+					console.log(eventAttrs);
 
-				// re-queue with the lagacy ids;
-				await requeueMessage(eventAttrs,RECHECK_ACTION.SCANNING,JSON.stringify({/*...newCheckRun,*/...sqsBaseMessage,check_run_id:newCheckRun.data.id}),SCAN_CHECK_QUEUE_URL);
-				
-				console.log('Finish updating with lagacy ids and requeue for scan check');
+					// re-queue with the lagacy ids;
+					await requeueMessage(eventAttrs,RECHECK_ACTION.SCANNING,JSON.stringify({/*...newCheckRun,*/...sqsBaseMessage,check_run_id:newCheckRun.data.id}),SCAN_CHECK_QUEUE_URL);
+					
+					console.log('Finish updating with lagacy ids and requeue for scan check');
+				} else {
+					console.error('Could not create check-run within GitHub - Abort further processing');
+					console.log(sqsBaseMessage);
+				}
 			} else {
 				console.log(`Un supported github event type: ${recordBody.github_event}`);
 			}
