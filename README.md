@@ -5,6 +5,15 @@ The purpose of the repository is to enable customers who want to use the full ve
 
 > Limitation - The solution supports only GitHub workflow triggers `push` and `pull_request`.
 
+## Example:
+<p align="center">
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-check-output.jpg?raw=true" alt="Github Push check"/>
+</p>
+  
+<p align="center">
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-check-output.jpg?raw=true" alt="Github Push check"/>
+</p>
+
 ## The implementation
 The repository contains an implementation of SERVERLESS framework which can deploy a set of (24) resources in a chosen AWS region.
 resources:  

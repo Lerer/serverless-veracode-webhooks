@@ -28,14 +28,11 @@ custom:
     logLevel: ${self:custom.${self:provider.stage}.LogLevel}
     GITHUB_APP_ID: ${env:GITHUB_APP_ID}
     GITHUB_APP_INSTALL_ID: ${env:GITHUB_APP_INSTALL_ID}
-    #API_ID: ${env:API_ID}
     PEM: ${env:PEM}
-    #API_KEY: ${env:API_KEY}
 
 provider:
   name: aws
   runtime: nodejs12.x
-  #stage: ${opt:stage, 'dev'}
   region: ap-southeast-2
   apiGateway:
     shouldStartNameWithService: true
@@ -47,13 +44,6 @@ provider:
             - sqs:SendMessage
           Resource: 
             - { "Fn::GetAtt" : ["ScanChecks","Arn"]}
-  #iamRoleStatements:
-  #  - Effect: "Allow"
-  #    Action:
-  #      - sqs:SendMessage
-  #    Resource: 
-  #      - { "Fn::GetAtt" : ["ScanChecks","Arn"]}
-      # - { "Fn::GetAtt" : ["GithubReportBack","Arn"]}
   environment: ${self:custom.settings}
   lambdaHashingVersion: 20201221
 
@@ -69,15 +59,8 @@ functions:
       - http:
           path: /github
           method: post
-  # hello:
-  #   handler: handler.checkScanStatus
-  #   memorySize: 128
-  #   events:
   #     - http:
   #         path: /checkScanStatus/{appGUID}
-  #         method: get
-  #     - http:
-  #         path: /checkScanStatus/{appGUID}/{sandboxGUID}
   #         method: get
   veracodeForGithubBuildProcessor:
     handler: handler.sqsSingleScanSample
