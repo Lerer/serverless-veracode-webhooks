@@ -38,32 +38,49 @@ Use the following links and follow the instruction to install the LTS version:
 - [NodeJS (with NPM)]('https://nodejs.org/en/')
 - [Serverless]('https://www.serverless.com/framework/docs/getting-started/' 'Serverless Framework')
 
-### 2. AWS Role for the deployment of the solution
+### 2. AWS Policy for the deployment of the solution
 
 Serverless framework (this project), need a role in AWS which will allow it to deploy its resources. An easy example can be found here:
-- [Customizing your IAM Policy]('https://seed.run/docs/customizing-your-iam-policy.html')
+- [Customizing your IAM Policy](https://seed.run/docs/customizing-your-iam-policy.html)
 
 Example with explanaition how to deploy custom AWS IAM role:
-- [Customize the Serverless IAM Policy]('https://serverless-stack.com/chapters/customize-the-serverless-iam-policy.html')
+- [Customize the Serverless IAM Policy](https://serverless-stack.com/chapters/customize-the-serverless-iam-policy.html)
 
 Get your own policy using online generator:
 - [Serverless Permission Policy Generator](https://open-sl.github.io/serverless-permission-generator/)
 
-Once a policy added to the AWS account, create a user with the newly create policy. That user will be used by our Serverless framework to create all required resources.
-   
+1. For the above customize policy, use the following settings:
+   1. Serverless Project Name: `github-status-check`
+   2. AWS Account ID: `<Your AWS account ID>`
+   3. AWS Region: `<AWS region you will deploy the solution into>`
+   4. Application Stage: `<dev|prod>`
+   5. Check the `Amazon API Gateway` checkbox
+   6. Click on `Generate`
+   7. `COPY TO CLIPBOARD`
+2. Head to AWS IAM and create a new policy
+   1. Paste the clipboard content into the JSON area. (Don't use the Visual editor).
+   2. Add the following section to the policy and replace with your own `Account ID` and `Region`:
+      ```json
+      {
+        "Effect": "Allow",
+        "Action": "sqs:*",
+        "Resource": [
+          "arn:aws:sqs:<Region>:<Account ID>:ScanChecks"
+        ]
+      }
+   3. Save the policy
+  
       
 ### 3. Configure Serverless to deploy to your AWS account
 
-Serverless framework has few options to configure it. The method I tested was a manual deployment from my desktop. If you plan to actively develop further the code here, you may want to look into setting CI/CD inside Serverless
+Serverless framework has few options to configure it. The method I tested was a manual deployment from my desktop. 
+
+_If you plan to actively develop further the code here, you may want to look into setting CI/CD inside Serverless_
 
 0) login to Serverless is a step in stage #1. If you have done so, please complete that step
 1) Create an AWS account for Serverless using the policy created in the previous stage: [Creating an IAM user in your AWS account
 ](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)
-
-<br>
-
-## Note - Due to the cyclic dependency and configuration, we will do a bit back and front between GitHub and AWS in the next set of instructions      
-<br>          
+ 
 
 ### 4. The GitHub Application
 Now that we have the AWS account pre-set, linked to Serverless - we are ready to deploy. However, in order to provide access back to GitHub, we need to enable permissions.    
@@ -97,7 +114,7 @@ We will do that by creating an Application in the GitHub account.
 WIP - Will update once is ready
 
 ### 6. Clone, Update and Deploy
-1. Clone this repository: ``
+1. Clone this repository: `git clone https://github.com/lerer/serverless-veracode-webhooks`
 2. Copy `empty.env` to `.env` and update the attributes
    * API_ID=[Veracode API Key]
    * API_KEY=[Veracode API Secret]
@@ -142,8 +159,8 @@ Since the solution _act as_ asynchronic WebHook, we can send a full scan to the 
            webhook_type: 'json-extended'
            webhook_url: <WEBHOOK_URL>  // the endpoint URL collected at stage 7
            webhook_secret: ${{ secrets.WEBHOOK_SECRET }}
-           data: '{"commit":"${{github.sha}}","run_id":"${{github.run_id}}","run_number":"${{github.run_number}}","veracode_app_name":"veracode-async"}' 
-           #"veracode_sandbox_name":"lets see if it works 3"}'
+           data: '{"commit":"${{github.sha}}","run_id":"${{github.run_id}}","veracode_app_name":"veracode-async"}' 
+           #"veracode_sandbox_name":"My Sandbox"}'
       ```
 
       The `data` attribute is a <ins>__single line__</ins> of the following JSON:
@@ -152,8 +169,9 @@ Since the solution _act as_ asynchronic WebHook, we can send a full scan to the 
       {
         "commit": "${{github.sha}}", // or the scan name
         "run_id":"${{github.run_id}}", // The run id to report back the results
-        "run_number":"${{github.run_number}}", // the run number in case of re-run
         "veracode_app_name":"veracode-async", // The application name
         "veracode_sandbox_name":"Sandbox 1" // The sandbox name. Don't include if using policy scan!
       }
       ```
+-------
+**Note** - To remove all resources deployed by this solution, simply run **`serverless remove`**
