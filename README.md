@@ -7,11 +7,11 @@ The purpose of the repository is to enable customers who want to use the full ve
 
 ## Example:
 <p align="center">
-  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-check-output.jpg?raw=true" alt="Github Push check"/>
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-summary-heading.png?raw=true" width="350px" alt="Github Push check"/>
 </p>
   
 <p align="center">
-  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-check-output.jpg?raw=true" alt="Github Push check"/>
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-check-output.png?raw=true" width="600px" alt="Github Push check"/>
 </p>
 
 ## The implementation
