@@ -25,13 +25,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Lerer/sls-sqs-test.git"
+    "url": "git+https://github.com/Lerer/serverless-veracode-webhooks.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Lerer/sls-sqs-test/issues"
+    "url": "https://github.com/Lerer/serverless-veracode-webhooks/issues"
   },
-  "homepage": "https://github.com/Lerer/sls-sqs-test#readme"
+  "homepage": "https://github.com/Lerer/serverless-veracode-webhookst#readme"
 }
