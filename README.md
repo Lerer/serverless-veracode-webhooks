@@ -1,4 +1,4 @@
-# Veracode Serverless Responder
+# Veracode Serverless Webhooks
 
 ## Purpose
 The purpose of the repository is to enable customers who want to use the full veracode Static scan (not the Pipeline or the IDE scans) and get updates back in an asynchronious method.
