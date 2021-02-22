@@ -173,5 +173,9 @@ Since the solution _act as_ asynchronic WebHook, we can send a full scan to the 
         "veracode_sandbox_name":"Sandbox 1" // The sandbox name. Don't include if using policy scan!
       }
       ```
+
+# Done!!!
+> Test you workflows and scan your repositories
+
 -------
 **Note** - To remove all resources deployed by this solution, simply run **`serverless remove`**
