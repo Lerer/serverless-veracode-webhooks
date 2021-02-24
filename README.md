@@ -44,17 +44,14 @@ To utilize the content, you will need to implement the following:
 
 ## Installation details:
 ### 1. install NodeJS, NPM, and Serverless
-Use the following links and follow the instruction to install the LTS version:
-- [NodeJS (with NPM)](https://nodejs.org/en/)
-- [Serverless](https://www.serverless.com/framework/docs/getting-started/ 'Serverless Framework')
+
+1. Use the following links and follow the instruction to install the LTS version:
+   - [NodeJS (with NPM)](https://nodejs.org/en/)
+   - [Serverless](https://www.serverless.com/framework/docs/getting-started/ 'Serverless Framework')
+2. If you don't have account in SERVERLESS, please create one (it is free)
+3. From your command line login to your account using `serverless login` and follow the instructions
 
 ### 2. AWS Policy for the deployment of the solution
-
-Serverless framework (this project), need a role in AWS which will allow it to deploy its resources. An easy example can be found here:
-- [Customizing your IAM Policy](https://seed.run/docs/customizing-your-iam-policy.html)
-
-Example with explanaition how to deploy custom AWS IAM role:
-- [Customize the Serverless IAM Policy](https://serverless-stack.com/chapters/customize-the-serverless-iam-policy.html)
 
 Get your own policy using online generator:
 - [Serverless Permission Policy Generator](https://open-sl.github.io/serverless-permission-generator/)
@@ -69,7 +66,8 @@ Get your own policy using online generator:
    7. `COPY TO CLIPBOARD`
 2. Head to AWS IAM and create a new policy
    1. Paste the clipboard content into the JSON area. (Don't use the Visual editor).
-   2. Add the following section to the policy and replace with your own `Account ID` and `Region`:
+   2. Modify the `arn:aws:iam::<Account ID>:role/github-status-check-dev-<region>-lambdaRole` and replace with `arn:aws:iam::<Account ID>:role/github-status-check-dev-<region>-*`
+   3. Add the following section to the policy and replace with your own `Account ID` and `Region`:
       ```json
       {
         "Effect": "Allow",
@@ -77,9 +75,29 @@ Get your own policy using online generator:
         "Resource": [
           "arn:aws:sqs:<Region>:<Account ID>:ScanChecks"
         ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": "logs:PutSubscriptionFilter",
+        "Resource": [
+          "arn:aws:logs:<Region>:<Account ID>:log-group:/aws/lambda/*",
+          "arn:aws:logs:<Region>:<Account ID>:log-group:/aws/api-gateway/*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": "lambda:CreateEventSourceMapping",
+        "Resource": "*"
       }
-   3. Save the policy
-  
+   4. Save the policy
+
+__Additional resources:__
+Serverless framework (this project), need a role in AWS which will allow it to deploy its resources. An easy example can be found here:
+- [Customizing your IAM Policy](https://seed.run/docs/customizing-your-iam-policy.html)
+
+Example with explanaition how to deploy custom AWS IAM role:
+- [Customize the Serverless IAM Policy](https://serverless-stack.com/chapters/customize-the-serverless-iam-policy.html)
+
       
 ### 3. Configure Serverless to deploy to your AWS account
 
@@ -87,9 +105,12 @@ Serverless framework has few options to configure it. The method I tested was a 
 
 _If you plan to actively develop further the code here, you may want to look into setting CI/CD inside Serverless_
 
-0) login to Serverless is a step in stage #1. If you have done so, please complete that step
+
 1) Create an AWS account for Serverless using the policy created in the previous stage: [Creating an IAM user in your AWS account
 ](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)
+   - Select `programmatic access` for user type 
+2) Save the `Access Key ID` and `Secret Access Key`
+3) Connect your Serverless to AWS using the new user using the instructions in the [credentials configuration](https://www.serverless.com/framework/docs/providers/aws/cli-reference/config-credentials/)
  
 
 ### 4. The GitHub Application
@@ -102,16 +123,14 @@ We will do that by creating an Application in the GitHub account.
    * Uncheck the `Active` checkbox in the Webhook section
    * Permissions:
      * Checks: `Read & Write`
-     * Issues: Read & Write
      * Metadata: `Read-only`
-     * Pull request: Read-only
-     * Webhooks: Read-only
 2. Make a note of the GitHub Application ID as we will need it to configure our solution.
    * See `App ID: <XXXXXX>` at the `General` -> `about` section of the application you just created 
-3. Genrate a private key for the application and save it. We will need it to get our serverless solution access to the repositories.
+3. Genrate a private key for the application and save it. We will need it to get our serverless solution access to the repositories. (Scroll down to the bottom of the General sections of the Application)
    * Use the following instructions: [Generating a private key](https://docs.github.com/apps/building-github-apps/authentication-options-for-github-apps/#generating-a-private-key)
 4. Install the application you created
    * At the application settings, click on install App
+   * On the right, click on the `install` button
    * Select either `All repositories`, or `Only select repositories`. 
      * If you decide to work with selected repository, you will have to maintain the list of allowed repositories.
    * Make a note for the `installation id` which can be found at the installation configuration URL 
@@ -134,7 +153,7 @@ WIP - Will update once is ready
      * __Single space__ separated and __NOT__ newline separated! 
    * GITHUB_APP_ID=[Application ID gathered at #4.2]
    * GITHUB_APP_INSTALL_ID=[Application installation ID gathered at #4.4]
-3. (Optional) If you logged in to the SERVERLESS dashboard (free), and would like to view and monior API endpoint and functions invocation:
+3. (Optional) If you logged in to the SERVERLESS dashboard (free), and would like to view and monitor API endpoint and functions invocation:
    * Login to your Serverless account 
    * Create an application. When asked for template, select `serverless framework`. 
      * Note the `application name`
@@ -142,7 +161,8 @@ WIP - Will update once is ready
      * app: [Your new `application name`]
      * org: [Your SERVERLESS account id as shown on your dashboard]
 4. If you choose to skip the previous step (#6.3), comment out (using # in front of the line) attributes `app` and `org` in your `serverless.yml`.
-5. Lasstly, import all dependencies by running `npm install` in the project root directory
+5. Modify `serverless.yml` and update the `region` value to your deployment region 
+6. Lasstly, import all dependencies by running `npm install` in the project root directory
 
 
 ### 7. Deploy the solution to AWS 
