@@ -120,7 +120,8 @@ We will do that by creating an Application in the GitHub account.
      * The page URL will look as follow: `http://github.com/settings/installations/XXXXXXXX`. The number at the end of the URL path is you `installation id`
 
 ### 5. Create an AWS Secret to encrypt and store few attributes
-WIP - Will update once is ready
+WIP - Will update once is ready   
+> Skip this stage until it will be ready 
 
 ### 6. Clone, Update and Deploy
 1. Clone this repository: `git clone https://github.com/lerer/serverless-veracode-webhooks`
@@ -139,7 +140,8 @@ WIP - Will update once is ready
    * Modify your `serverless.yml` file in the solution directory and override the following:
      * app: [Your new `application name`]
      * org: [Your SERVERLESS account id as shown on your dashboard]
-4. If you choose to skip the previous step, comment out (using # in front of the line) attributes `app` and `org` in your `serverless.yml`.
+4. If you choose to skip the previous step (#6.3), comment out (using # in front of the line) attributes `app` and `org` in your `serverless.yml`.
+5. Lasstly, import all dependencies by running `npm install` in the project root directory
 
 
 ### 7. Deploy the solution to AWS 
