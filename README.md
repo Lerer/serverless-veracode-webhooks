@@ -45,8 +45,8 @@ To utilize the content, you will need to implement the following:
 ## Installation details:
 ### 1. install NodeJS, NPM, and Serverless
 Use the following links and follow the instruction to install the LTS version:
-- [NodeJS (with NPM)]('https://nodejs.org/en/')
-- [Serverless]('https://www.serverless.com/framework/docs/getting-started/' 'Serverless Framework')
+- [NodeJS (with NPM)](https://nodejs.org/en/)
+- [Serverless](https://www.serverless.com/framework/docs/getting-started/ 'Serverless Framework')
 
 ### 2. AWS Policy for the deployment of the solution
 
