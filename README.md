@@ -66,7 +66,7 @@ Get your own policy using online generator:
    7. `COPY TO CLIPBOARD`
 2. Head to AWS IAM and create a new policy
    1. Paste the clipboard content into the JSON area. (Don't use the Visual editor).
-   2. Modify the `arn:aws:iam::<Account ID>:role/github-status-check-dev-<region>-lambdaRole` and replace with `arn:aws:iam::<Account ID>:role/github-status-check-dev-<region>-*`
+   2. Modify the `arn:aws:iam::<Account ID>:role/github-status-check-<stage>-<region>-lambdaRole` and replace with `arn:aws:iam::<Account ID>:role/github-status-check-<stage>-<region>-*`
    3. Add the following section to the policy and replace with your own `Account ID` and `Region`:
       ```json
       {
