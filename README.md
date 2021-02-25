@@ -4,15 +4,22 @@
 ## Purpose
 The purpose of the repository is to enable customers who want to use the full veracode Static scan (not the Pipeline or the IDE scans) and get updates back in an asynchronious method.
 
-> Limitation - The solution supports only GitHub workflow triggers `push` and `pull_request`.
+__Note__ - The solution supports __only__ GitHub workflow triggered by `push` and `pull_request`.
 
-## Example:
+## Output Example:
 <p align="center">
   <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-summary-heading.png?raw=true" width="350px" alt="Github Push check"/>
 </p>
   
 <p align="center">
   <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-check-output.png?raw=true" width="600px" alt="Github Push check"/>
+</p>
+
+## The Savings
+  - You don't need to wait for the scan to finish in order to get the results in your PR
+  - Build pipeline time is not impacted (besides upload time)
+<p align="center">
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/build-pipeline-run.png?raw=true" width="600px" alt="Build pipeline run times"/>
 </p>
 
 ## The implementation
