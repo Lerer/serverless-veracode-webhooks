@@ -1,4 +1,4 @@
-# Veracode Serverless Webhooks
+# Veracode Serverless Webhooks - For GitHub workflows
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com) [![Maintained by Yaakov Lerer](https://img.shields.io/badge/maintained%20by-Lerer-brightgreen)](http://www.github.com/lerer) [![GitHub issues](https://img.shields.io/github/issues/lerer/serverless-veracode-webhooks?color=orange)](https://github.com/Lerer/serverless-veracode-webhooks/issues)
 
 ## Purpose
