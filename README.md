@@ -1,5 +1,5 @@
 # Veracode Serverless Webhooks
-![Maintained by Yaakov Lerer](https://img.shields.io/badge/maintained%20by-Lerer-brightgreen) ![GitHub issues](https://img.shields.io/github/issues/lerer/serverless-veracode-webhooks?color=orange)
+[![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com) [![Maintained by Yaakov Lerer](https://img.shields.io/badge/maintained%20by-Lerer-brightgreen)](http://www.github.com/lerer) [![GitHub issues](https://img.shields.io/github/issues/lerer/serverless-veracode-webhooks?color=orange)](https://github.com/Lerer/serverless-veracode-webhooks/issues)
 
 ## Purpose
 The purpose of the repository is to enable customers who want to use the full veracode Static scan (not the Pipeline or the IDE scans) and get updates back in an asynchronious method.
