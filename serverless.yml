@@ -15,6 +15,7 @@ package:
     - '**/*.test.js'
     - 'empty.env'
     - resources/**
+    - permissions/**
 
 custom:
   prod:
