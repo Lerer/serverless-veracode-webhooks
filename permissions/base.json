@@ -1,0 +1,203 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "cloudformation:List*",
+          "cloudformation:Get*",
+          "cloudformation:ValidateTemplate"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "cloudformation:CreateStack",
+          "cloudformation:CreateUploadBucket",
+          "cloudformation:DeleteStack",
+          "cloudformation:Describe*",
+          "cloudformation:UpdateStack"
+        ],
+        "Resource": [
+          "arn:aws:cloudformation:<AWSRegion>:<Account_ID>:stack/<Service>-<Stage>/*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "lambda:Get*",
+          "lambda:List*",
+          "lambda:CreateFunction"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "s3:GetBucketLocation",
+          "s3:CreateBucket",
+          "s3:DeleteBucket",
+          "s3:ListBucket",
+          "s3:GetBucketPolicy",
+          "s3:PutBucketPolicy",
+          "s3:ListBucketVersions",
+          "s3:PutAccelerateConfiguration",
+          "s3:GetEncryptionConfiguration",
+          "s3:PutEncryptionConfiguration",
+          "s3:DeleteBucketPolicy"
+        ],
+        "Resource": [
+          "arn:aws:s3:::<Service>*serverlessdeploy*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ],
+        "Resource": [
+          "arn:aws:s3:::<Service>*serverlessdeploy*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "lambda:AddPermission",
+          "lambda:CreateAlias",
+          "lambda:DeleteFunction",
+          "lambda:InvokeFunction",
+          "lambda:PublishVersion",
+          "lambda:RemovePermission",
+          "lambda:Update*"
+        ],
+        "Resource": [
+          "arn:aws:lambda:<AWSRegion>:<Account_ID>:function:<Service>-<Stage>-*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "cloudwatch:GetMetricStatistics"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Action": [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:DeleteLogGroup"
+        ],
+        "Resource": [
+          "arn:aws:logs:<AWSRegion>:<Account_ID>:*"
+        ],
+        "Effect": "Allow"
+      },
+      {
+        "Action": [
+          "logs:PutLogEvents"
+        ],
+        "Resource": [
+          "arn:aws:logs:<AWSRegion>:<Account_ID>:*"
+        ],
+        "Effect": "Allow"
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups",
+          "logs:FilterLogEvents"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "events:Put*",
+          "events:Remove*",
+          "events:Delete*"
+        ],
+        "Resource": [
+          "arn:aws:events:<AWSRegion>:<Account_ID>:rule/<Service>-<Stage>-<AWSRegion>"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "events:DescribeRule"
+        ],
+        "Resource": [
+          "arn:aws:events:<AWSRegion>:<Account_ID>:rule/<Service>-<Stage>-*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "iam:PassRole"
+        ],
+        "Resource": [
+          "arn:aws:iam::<Account_ID>:role/*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "iam:GetRole",
+          "iam:CreateRole",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:DeleteRole"
+        ],
+        "Resource": [
+          "arn:aws:iam::<Account_ID>:role/<Service>-<Stage>-<AWSRegion>-*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "apigateway:GET",
+          "apigateway:POST",
+          "apigateway:PUT",
+          "apigateway:DELETE",
+          "apigateway:PATCH"
+        ],
+        "Resource": [
+          "arn:aws:apigateway:*::/apis*",
+          "arn:aws:apigateway:*::/restapis*",
+          "arn:aws:apigateway:*::/apikeys*",
+          "arn:aws:apigateway:*::/usageplans*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": "sqs:*",
+        "Resource": [
+          "arn:aws:sqs:<AWSRegion>:<Account_ID>:ScanChecks"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": "logs:PutSubscriptionFilter",
+        "Resource": [
+          "arn:aws:logs:<AWSRegion>:<Account_ID>:log-group:/aws/lambda/*",
+          "arn:aws:logs:<AWSRegion>:<Account_ID>:log-group:/aws/api-gateway/*"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": "lambda:CreateEventSourceMapping",
+        "Resource": "*"
+      }
+    ]
+  }
