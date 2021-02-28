@@ -41,13 +41,14 @@ resources:
 ## Installation instructions:
 To utilize the content, you will need to implement the following:  
 1) Install NodeJS, NPM, and the [Serverless Framework]('https://www.serverless.com/framework/docs/getting-started/' 'Serverless Framework')
-2) Creation of AWS deployment role
-3) Configure the Serverless Framework to your AWS Account (using the pre-defined deployment role)
-4) Create a Github Application Definition      
-5) __WIP__ - Create an AWS Secret to encrypt and store few attributes
-6) Clone the repository and update few attributes
-7) Deploy the stack with 'serverless deploy'
-8) Configure your repositories pipeline to call the notifier
+2) Clone the repository
+3) Creation of AWS deployment role
+4) Configure the Serverless Framework to your AWS Account (using the pre-defined deployment role)
+5) Create a Github Application Definition      
+6) __WIP__ - Create an AWS Secret to encrypt and store few attributes
+7) Update few Environment Variable
+8) Deploy the stack with 'serverless deploy'
+9) Configure your repositories pipeline to call the notifier
 
 ## Installation details:
 ### 1. install NodeJS, NPM, and Serverless
@@ -58,45 +59,24 @@ To utilize the content, you will need to implement the following:
 2. If you don't have account in SERVERLESS, please create one (it is free)
 3. From your command line login to your account using `serverless login` and follow the instructions
 
-### 2. AWS Policy for the deployment of the solution
+### 2. Clone, Update and Deploy
+1. Clone this repository: `git clone https://github.com/lerer/serverless-veracode-webhooks`
+2. Import dependencies by executing `npm install`
+3. Copy `empty.env` to `.env` and update the attributes
+   - AWS_Region=`<Your AWS deployment region>`
+   - AWS_Account_ID=`<Your AWS Account ID (Numeric)>`
+   - Stage=`<dev|prod>`
 
-Get your own policy using online generator:
-- [Serverless Permission Policy Generator](https://open-sl.github.io/serverless-permission-generator/)
 
-1. For the above customize policy, use the following settings:
-   1. Serverless Project Name: `github-status-check`
-   2. AWS Account ID: `<Your AWS account ID>`
-   3. AWS Region: `<AWS region you will deploy the solution into>`
-   4. Application Stage: `<dev|prod>`
-   5. Check the `Amazon API Gateway` checkbox
-   6. Click on `Generate`
-   7. `COPY TO CLIPBOARD`
-2. Head to AWS IAM and create a new policy
-   1. Paste the clipboard content into the JSON area. (Don't use the Visual editor).
-   2. Modify the `arn:aws:iam::<Account ID>:role/github-status-check-<stage>-<region>-lambdaRole` and replace with `arn:aws:iam::<Account ID>:role/github-status-check-<stage>-<region>-*`
-   3. Add the following section to the policy and replace with your own `Account ID` and `Region`:
-      ```json
-      {
-        "Effect": "Allow",
-        "Action": "sqs:*",
-        "Resource": [
-          "arn:aws:sqs:<Region>:<Account ID>:ScanChecks"
-        ]
-      },
-      {
-        "Effect": "Allow",
-        "Action": "logs:PutSubscriptionFilter",
-        "Resource": [
-          "arn:aws:logs:<Region>:<Account ID>:log-group:/aws/lambda/*",
-          "arn:aws:logs:<Region>:<Account ID>:log-group:/aws/api-gateway/*"
-        ]
-      },
-      {
-        "Effect": "Allow",
-        "Action": "lambda:CreateEventSourceMapping",
-        "Resource": "*"
-      }
-   4. Save the policy
+### 3. AWS Policy for the deployment of the solution
+In order to provided the minimun policy required for the deployment of the solutions, we will need to generate a Policy. 
+
+1. Run the command: __`npm run genrate-permissions`__ which will generate a JSON format policy.
+   - This will only work correctly if you filled-in the environment variable in the previous stage
+   - The policy is generates in the project root directory inside a file: __`policy.json`__
+2. Login to your AWS portal, navigate IAM Service and create a new policy
+   1. Paste the `policy.json` file content into the JSON area of the policy. (Don't use the Visual editor).
+   2. Save the policy
 
 __Additional resources:__
 Serverless framework (this project), need a role in AWS which will allow it to deploy its resources. An easy example can be found here:
@@ -106,7 +86,7 @@ Example with explanaition how to deploy custom AWS IAM role:
 - [Customize the Serverless IAM Policy](https://serverless-stack.com/chapters/customize-the-serverless-iam-policy.html)
 
       
-### 3. Configure Serverless to deploy to your AWS account
+### 4. Configure Serverless to deploy to your AWS account
 
 Serverless framework has few options to configure it. The method I tested was a manual deployment from my desktop. 
 
@@ -117,10 +97,10 @@ _If you plan to actively develop further the code here, you may want to look int
 ](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)
    - Select `programmatic access` for user type 
 2) Save the `Access Key ID` and `Secret Access Key`
-3) Connect your Serverless to AWS using the new user using the instructions in the [credentials configuration](https://www.serverless.com/framework/docs/providers/aws/cli-reference/config-credentials/)
+3) __Connect your Serverless to AWS using the new user using the instructions in the [credentials configuration](https://www.serverless.com/framework/docs/providers/aws/cli-reference/config-credentials/)__
  
 
-### 4. The GitHub Application
+### 5. The GitHub Application
 Now that we have the AWS account pre-set, linked to Serverless - we are ready to deploy. However, in order to provide access back to GitHub, we need to enable permissions.    
 We will do that by creating an Application in the GitHub account.
 
@@ -146,13 +126,14 @@ We will do that by creating an Application in the GitHub account.
      * Click on the `Configure` button for the application you created and installed
      * The page URL will look as follow: `http://github.com/settings/installations/XXXXXXXX`. The number at the end of the URL path is you `installation id`
 
-### 5. Create an AWS Secret to encrypt and store few attributes
+
+### 6. Create an AWS Secret to encrypt and store few attributes
 WIP - Will update once is ready   
 > Skip this stage until it will be ready 
 
-### 6. Clone, Update and Deploy
-1. Clone this repository: `git clone https://github.com/lerer/serverless-veracode-webhooks`
-2. Copy `empty.env` to `.env` and update the attributes
+
+### 7. Update more environment variables
+1. In `.env` and update the attributes
    * API_ID=[Veracode API Key]
    * API_KEY=[Veracode API Secret]
    * PEM=[content of the private key created at #4.3.]
@@ -160,16 +141,14 @@ WIP - Will update once is ready
      * __Single space__ separated and __NOT__ newline separated! 
    * GITHUB_APP_ID=[Application ID gathered at #4.2]
    * GITHUB_APP_INSTALL_ID=[Application installation ID gathered at #4.4]
-3. (Optional) If you logged in to the SERVERLESS dashboard (free), and would like to view and monitor API endpoint and functions invocation:
+2. (Optional) If you logged in to the SERVERLESS dashboard (free), and would like to view and monitor API endpoint and functions invocation:
    * Login to your Serverless account 
    * Create an application. When asked for template, select `serverless framework`. 
-     * Note the `application name`
+     * Use __`my-veracode`__ for `application name`
    * Modify your `serverless.yml` file in the solution directory and override the following:
      * app: [Your new `application name`]
      * org: [Your SERVERLESS account id as shown on your dashboard]
-4. If you choose to skip the previous step (#6.3), comment out (using # in front of the line) attributes `app` and `org` in your `serverless.yml`.
-5. Modify `serverless.yml` and update the `region` value to your deployment region 
-6. Lasstly, import all dependencies by running `npm install` in the project root directory
+3. If you choose to skip the previous step (#6.3), comment out (using # in front of the line) attributes `app` and `org` in your `serverless.yml`.
 
 
 ### 7. Deploy the solution to AWS 

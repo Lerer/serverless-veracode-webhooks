@@ -33,4 +33,4 @@ const replaced = jsonTemplate.Statement.map((statement) => {
     }
 });
 
-fs.writeFileSync('./permissions/policy.json',JSON.stringify(replaced, null, 2));
+fs.writeFileSync('./policy.json',JSON.stringify(replaced, null, 2));
