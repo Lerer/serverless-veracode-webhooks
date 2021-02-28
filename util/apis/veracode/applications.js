@@ -20,7 +20,7 @@ const getApplicationById = async (appId) => {
     if (appId && appId!==null && appId.length>0){
         try {
             const response = await apiUtil.request('GET','api.veracode.com',`/appsec/v1/applications/${appId}`, null);
-            console.log(response.data);
+            //console.log(response.data);
             application = response.data;
             console.log(application);
         } catch (error) {

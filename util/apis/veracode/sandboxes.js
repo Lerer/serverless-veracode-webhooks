@@ -45,7 +45,7 @@ const getSandboxByName = async (appGUID,sandboxName) => {
             sandbox = sandboxes[0];
         } else {
             console.info(`getSandboxByName - Could not find the sandbox ny name [${sandboxName}]`);
-            console.log(response.data);
+            //console.log(response.data);
         }
         console.log(sandbox);
     } catch (error) {
