@@ -149,10 +149,21 @@ WIP - Will update once is ready
      * app: [Your new `application name`]
      * org: [Your SERVERLESS account id as shown on your dashboard]
 3. If you choose to skip the previous step (#6.3), comment out (using # in front of the line) attributes `app` and `org` in your `serverless.yml`.
-
+4. Navigate to `package.json` file and update the deploy scripts with your own AWS deployment region 
+    __Here:__
+    ```JSON
+    "scripts": {
+      ...
+      "deploy-dev": "sls deploy --stage dev --region ap-southeast-2",
+      "deploy": "sls deploy --stage prod --region ap-southeast-2",  
+      ...
+    }
+    ```
 
 ### 7. Deploy the solution to AWS 
-* Run the deployment command: __`serverless deploy`__
+* Run the deployment command
+  * If you deploy in dev: __`npm run deploy-dev`__
+  * If you deploy as production: __`npm run deploy`__
 * Pay attenbtion to the deployment output for error
 * look for the `Service Information` section and note the `endpoint` which should look similar to: 
   * `POST - https://kjhkjhz7l8.execute-api.ap-southeast-2.amazonaws.com/dev/github`
@@ -183,7 +194,7 @@ Since the solution _act as_ asynchronic WebHook, we can send a full scan to the 
 
       The `data` attribute is a <ins>__single line__</ins> of the following JSON:
 
-      ```json
+      ```JSON with Comments
       {
         "commit": "${{github.sha}}", // or the scan name
         "run_id":"${{github.run_id}}", // The run id to report back the results
