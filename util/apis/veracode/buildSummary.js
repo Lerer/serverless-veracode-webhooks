@@ -8,6 +8,8 @@ const POLICY_COMPLIANCE = {
   NOT_ASSESSED: 'Not Assessed'
 }
 
+const SCA_SUMMARY_SECTION = 'software_composition_analysis';
+
 const getBuildSummary = async (appGUID,sandboxGUID,buildId) => {
     console.log('getBuildSummary - START');
     let jsonBuildSummary = {};
@@ -31,7 +33,8 @@ const getBuildSummary = async (appGUID,sandboxGUID,buildId) => {
         //console.log('getBuildSummary - finish printing results');
         
     } catch (e) {
-        console.log(e.message, e)
+        console.log(e.message, e);
+        console.log(JSON.stringify(e,null,2));
     }
     console.log('getBuildSummary - END');
     return jsonBuildSummary;
@@ -53,13 +56,57 @@ const getParseBuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buil
     response.summaryMD = summaryMD;
     response.textMD = textMD;
     
-    console.log(textMD);
-    console.log(summaryMD);
+    //console.log(textMD);
+    //console.log(summaryMD);
   } else {
     console.log(`Could not find summary report for build ${buildId}`);
   }
   return response;
 };
+
+const getParseSCABuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buildInfo) => {
+  const response = {
+    summary: {},
+    summaryMD: 'N/A',
+    textMD: 'Could not fetch build summary!'
+  };
+  const summary = await getBuildSummary(appGUID,sandboxGUID,buildId);
+  //console.log(summary);
+  response.summary = summary;
+  if (summary && summary[SCA_SUMMARY_SECTION] && summary[SCA_SUMMARY_SECTION].sca_service_available && summary[SCA_SUMMARY_SECTION].sca_service_available=== true) {
+    console.log(`Found SCA results to report for build ${buildId}`);
+    const reportLink = `[View Report](https://analysiscenter.veracode.com/auth/index.jsp#ViewReportsResultSummary:${orgID}:${appID}:${buildId})`;
+    const summaryMD = getSCASummaryMarkDown(summary,reportLink,buildInfo);
+    const textMD = summaryMD;
+    response.summaryMD = summaryMD;
+    response.textMD = textMD;
+    
+    console.log(textMD);
+    console.log(summaryMD);
+  } else {
+    console.log(`Could not find SCA summary report for build ${buildId}`);
+    console.log(summary);
+  }
+}
+
+/*
+  "software_composition_analysis": {
+    "third_party_components": 0,
+    "violate_policy": true,
+    "components_violated_policy": 0,
+    "blacklisted_components": 0,
+    "sca_service_available": true
+  }
+*/
+const getSCASummaryMarkDown = (buildSummary,reportLink,buildInfo) => {
+  const SCASummary = buildSummary[SCA_SUMMARY_SECTION];
+  let summaryHeading = `> Number of 3rd party components: __${SCASummary.third_party_components}__`;
+  summaryHeading = `${summaryHeading}\n> Number of components violeting policy: __${SCA_SUMMARY_SECTION.components_violated_policy}__`;
+  summaryHeading = `${summaryHeading}\n> Overall violeting policy: __${SCA_SUMMARY_SECTION.violate_policy}__`;
+  let outputSummary = `${summaryHeading}`;
+
+  return outputSummary;
+}
 
 const getBuildSummaryMarkDown = (buildSummary,reportLink,buildInfo) => {
     let sandbox = false;
@@ -175,5 +222,6 @@ module.exports = {
   getBuildSummaryMarkDown,
   getBuildSumaryDetails,
   getParseBuildSummary,
+  getParseSCABuildSummary,
   POLICY_COMPLIANCE
 };

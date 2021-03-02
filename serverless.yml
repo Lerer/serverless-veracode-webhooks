@@ -27,15 +27,16 @@ custom:
   settings:
     ACCOUNT_ID: "#{AWS::AccountId}"
     TARGET_REGION: ${self:provider.region}
-    logLevel: ${self:custom.${self:provider.stage}.LogLevel}
+    logLevel: ${self:custom.${opt:stage, self:provider.stage, 'dev'}.LogLevel}
     GITHUB_APP_ID: ${env:GITHUB_APP_ID}
     GITHUB_APP_INSTALL_ID: ${env:GITHUB_APP_INSTALL_ID}
     PEM: ${env:PEM}
 
 provider:
   name: aws
+  stage: dev # default settings
   runtime: nodejs12.x
-  region: ${env:AWS_Region}
+  region: ap-southeast-2
   apiGateway:
     shouldStartNameWithService: true
   iam:
@@ -54,6 +55,7 @@ plugins:
   - serverless-iam-roles-per-function
 
 functions:
+  # Listen to a call from GitHub Workflow 
   githubListener:
     handler: githubHandler.webhookListen
     memorySize: 128

@@ -33,4 +33,9 @@ const replaced = jsonTemplate.Statement.map((statement) => {
     }
 });
 
-fs.writeFileSync('./policy.json',JSON.stringify(replaced, null, 2));
+const policy = {
+    "Version": "2012-10-17",
+    "Statement": replaced
+};
+
+fs.writeFileSync('./policy.json',JSON.stringify(policy, null, 2));
