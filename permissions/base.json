@@ -160,7 +160,9 @@
           "iam:DeleteRole"
         ],
         "Resource": [
-          "arn:aws:iam::<Account_ID>:role/<Service>-<Stage>-<AWSRegion>-*"
+          "arn:aws:iam::<Account_ID>:role/<Service>-<Stage>-IamRoleCustomResourcesLamb-*",
+          "arn:aws:iam::<Account_ID>:role/<Service>-<Stage>-<AWSRegion>-lambdaRole",
+          "arn:aws:iam::<Account_ID>:role/<Service>-<Stage>-EnterpriseLogAccessIamRole-*"
         ]
       },
       {
@@ -188,7 +190,10 @@
       },
       {
         "Effect": "Allow",
-        "Action": "logs:PutSubscriptionFilter",
+        "Action": [
+          "logs:PutSubscriptionFilter",
+          "logs:DeleteSubscriptionFilter"
+        ],
         "Resource": [
           "arn:aws:logs:<AWSRegion>:<Account_ID>:log-group:/aws/lambda/*",
           "arn:aws:logs:<AWSRegion>:<Account_ID>:log-group:/aws/api-gateway/*"
@@ -196,7 +201,10 @@
       },
       {
         "Effect": "Allow",
-        "Action": "lambda:CreateEventSourceMapping",
+        "Action": [
+          "lambda:CreateEventSourceMapping",
+          "lambda:DeleteEventSourceMapping"
+        ],
         "Resource": "*"
       }
     ]

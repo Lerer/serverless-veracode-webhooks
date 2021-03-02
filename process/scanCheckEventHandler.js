@@ -199,7 +199,9 @@ const handleEvent = async (customEvent) => {
 				console.log(checkRunFailed);
 			} else if (scanRecheckTime > 0) {
 				// Update if status changed
-				if (buildInfo.analysis_unit['$'].status !== recordBody.previous_scan_status) {
+				const currentStatus = buildInfo.analysis_unit['$'].status;
+				if (currentStatus !== recordBody.previous_scan_status) {
+					// Sending update to the Static check
 					console.log(`Status changed from ${recordBody.previous_scan_status} to ${buildInfo.analysis_unit['$'].status} - sending update`)
 					console.log(JSON.stringify(eventAttrs));
 					const reportingStatus = getGithubStatusFromBuildStatus(buildInfo);
@@ -219,11 +221,31 @@ const handleEvent = async (customEvent) => {
 						});
 					console.log(checkRunUpdate);
 					console.log('Github check run updated');
+
+					if (currentStatus === buildInfoHandler.STATUS.PRESCAN_FINISHED || 
+						currentStatus===buildInfoHandler.STATUS.SUBMITTED_TO_SCAN || 
+						currentStatus===buildInfoHandler.STATUS.SCAN_IN_PROGRESS) {
+						// Check for SCA results and if it has, submit new check for SCA
+						// 1. get report summary
+						// 2. check if SCA summary included
+						// 3. extract SCA summary attributes
+						// 4. Create a check with the SCA summary
+						const appID = eventAttrs.appLegacyID.stringValue;
+						const orgID = eventAttrs.orgID.stringValue;
+						const appGUID = eventAttrs.appGUID.stringValue;
+						const sandboxGUID = eventAttrs.sandboxGUID ? eventAttrs.sandboxGUID.stringValue : undefined;
+						console.log(`Checking for SCA status since build state moved to: ${currentStatus}`);
+						//const parsedSummary = await buildSummaryHandler.getParseSCABuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
+						//console.log(parsedSummary);
+						
+						console.log('Finish checking for SCA Build status');
+
+					}
 				}
 				// any other rescan action
 				console.log(`requeuing message for another check in ${scanRecheckTime} seconds`);
 				// requeue same message with an update on the current status as the latest status
-				await requeueMessage(eventAttrs,scanRecheckTime,JSON.stringify({...recordBody,previous_scan_status:buildInfo.analysis_unit['$'].status}),SCAN_CHECK_QUEUE_URL);
+				await requeueMessage(eventAttrs,scanRecheckTime,JSON.stringify({...recordBody,previous_scan_status:currentStatus}),SCAN_CHECK_QUEUE_URL);
 			}
 			// TODO - depend on status - 
 			// - requeue the same message, 
@@ -258,42 +280,42 @@ const getStatusChangeSummary = (appName,sandboxName,buildID) => {
     return summaryHeading;
 }
 
-const getLagacyIDsFromGUID = async (appGUID,sandboxGUID) => {
-	const retVal = {
-		appLegacyID : {
-			dataType: "Number",
-			stringValue: '0'
-		}
-	}
+// const getLagacyIDsFromGUID = async (appGUID,sandboxGUID) => {
+// 	const retVal = {
+// 		appLegacyID : {
+// 			dataType: "Number",
+// 			stringValue: '0'
+// 		}
+// 	}
 
-	let response = await appsHandler.getApplicationById(appGUID);
-	if (response.id) {
-		console.log(`adding app legacy id: ${response.id}`);
-		retVal.appLegacyID = {
-			dataType: "Number",
-			stringValue: response.id + ''
-		}
-	} else {
-		// No point to continue if app id is not found
-		console.log('no id parameter in the response for get application by id');
-		return retVal;
-	}
+// 	let response = await appsHandler.getApplicationById(appGUID);
+// 	if (response.id) {
+// 		console.log(`adding app legacy id: ${response.id}`);
+// 		retVal.appLegacyID = {
+// 			dataType: "Number",
+// 			stringValue: response.id + ''
+// 		}
+// 	} else {
+// 		// No point to continue if app id is not found
+// 		console.log('no id parameter in the response for get application by id');
+// 		return retVal;
+// 	}
 
-	if (sandboxGUID && sandboxGUID!=null) {
-		// get the sandbox id
-		response = await sandboxHandler.getSandboxByGUID(appGUID,sandboxGUID);
-		if (response.id) {
-			console.log(`adding sandbox legacy id: ${response.id}`);
-			retVal.sandboxLegacyID = {
-				dataType: "Number",
-				stringValue: response.id + ''
-			}
-		} else {
-			console.log('no id parameter in the response for get sandbox by guid');
-		}
-	}
-	return retVal
-}
+// 	if (sandboxGUID && sandboxGUID!=null) {
+// 		// get the sandbox id
+// 		response = await sandboxHandler.getSandboxByGUID(appGUID,sandboxGUID);
+// 		if (response.id) {
+// 			console.log(`adding sandbox legacy id: ${response.id}`);
+// 			retVal.sandboxLegacyID = {
+// 				dataType: "Number",
+// 				stringValue: response.id + ''
+// 			}
+// 		} else {
+// 			console.log('no id parameter in the response for get sandbox by guid');
+// 		}
+// 	}
+// 	return retVal
+// }
 
 const getLagacyIDsFromName = async (appName,sandboxName) => {
 	const retVal = {

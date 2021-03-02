@@ -1,12 +1,11 @@
 'use strict';
 
-const checkRun = require('./util/apis/github/checkRun');
 const AWS = require('aws-sdk')
 
 const AWS_ACCOUNT = process.env.ACCOUNT_ID;
 const AWS_REGION = process.env.TARGET_REGION;
 
-// // Set the region
+// Set the region
 AWS.config.update({region: AWS_REGION});
 
 const SCAN_CHECK_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/ScanChecks`;

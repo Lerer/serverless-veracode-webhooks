@@ -17,7 +17,8 @@
   },
   "scripts": {
     "test": "jest",
-    "deploy": "sls deploy --stage dev",
+    "deploy-dev": "sls deploy --stage dev --region ap-southeast-2",
+    "deploy": "sls deploy --stage prod --region ap-southeast-2",
     "test-app-list": "node -r dotenv/config test/test-hmac.js",
     "test-veracode-apis": "node -r dotenv/config --trace-warnings test/testVeracodeAPIs.js",
     "test-oktokit": "node -r dotenv/config --trace-warnings test/testGithub.js",
