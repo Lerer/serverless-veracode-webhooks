@@ -201,7 +201,10 @@
       },
       {
         "Effect": "Allow",
-        "Action": "lambda:CreateEventSourceMapping",
+        "Action": [
+          "lambda:CreateEventSourceMapping",
+          "lambda:DeleteEventSourceMapping"
+        ],
         "Resource": "*"
       }
     ]
