@@ -179,7 +179,8 @@ Since the solution _act as_ asynchronic WebHook, we can send a full scan to the 
    * In your Github workflow configuration, use the official __[upload-and-scan](https://github.com/marketplace/actions/veracode-upload-and-scan)__ action to trigger a full scan
    * When you configure the above __action__, set:
      * `version: ${{ github.run_id }}`
-     * `scantimeout: 0`
+     * `scantimeout: 0` 
+       * (or don't include `scantimeout` at all)
    * immidiatly after the upload and scan configure the following __action__
      ```yml
        - name: Invoke deployment hook
