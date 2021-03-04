@@ -152,7 +152,7 @@ const handleEvent = async (customEvent) => {
 				if (!recordBody.pre_calculated_updated || complianceStatus!==buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
 					const parsedSummary = await buildSummaryHandler.getParseBuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
 					//console.log(parsedSummary);
-					const conclusion = calculateConclusion(complianceStatus,sandboxGUID); 
+					const conclusion = calculateConclusion(parsedSummary.summaryCompliance); 
 					console.log(`Current scan conclusion: '${conclusion}'`);
 					const checkRunFinished = await checkRun.updateCheckRun(
 						recordBody.repository_owner_login,
@@ -221,26 +221,6 @@ const handleEvent = async (customEvent) => {
 						});
 					//console.log(checkRunUpdate);
 					console.log('Github check run updated');
-
-					if (currentStatus === buildInfoHandler.STATUS.PRESCAN_FINISHED || 
-						currentStatus===buildInfoHandler.STATUS.SUBMITTED_TO_SCAN || 
-						currentStatus===buildInfoHandler.STATUS.SCAN_IN_PROGRESS) {
-						// Check for SCA results and if it has, submit new check for SCA
-						// 1. get report summary
-						// 2. check if SCA summary included
-						// 3. extract SCA summary attributes
-						// 4. Create a check with the SCA summary
-						const appID = eventAttrs.appLegacyID.stringValue;
-						const orgID = eventAttrs.orgID.stringValue;
-						const appGUID = eventAttrs.appGUID.stringValue;
-						const sandboxGUID = eventAttrs.sandboxGUID ? eventAttrs.sandboxGUID.stringValue : undefined;
-						console.log(`Checking for SCA status since build state moved to: ${currentStatus}`);
-						//const parsedSummary = await buildSummaryHandler.getParseSCABuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
-						//console.log(parsedSummary);
-						
-						console.log('Finish checking for SCA Build status');
-
-					}
 				}
 				// any other rescan action
 				console.log(`requeuing message for another check in ${scanRecheckTime} seconds`);
@@ -258,13 +238,12 @@ const handleEvent = async (customEvent) => {
 	console.log('handleEvent - END')
 }
 
-const calculateConclusion = (complianceStatus, sandboxGUID) => {
-	console.log(`calculateConclusion for : '${complianceStatus}'`)
-	if (sandboxGUID && sandboxGUID !== null && sandboxGUID.length > 0) {
-		return checkRun.CONCLUSION.NATURAL;
-	} else if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.PASS) {
+const calculateConclusion = (complianceStatus) => 
+	console.log(`scancheckEventHandler -> calculateConclusion for : '${complianceStatus}'`)
+	if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.PASS) {
 		return checkRun.CONCLUSION.SUCCESS;
-	} else if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
+	} else if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING ||
+			   complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.NOT_ASSESSED) {
 		return checkRun.CONCLUSION.NATURAL;
 	} else {
 		return checkRun.CONCLUSION.FAILURE;

@@ -45,7 +45,8 @@ const getParseBuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buil
   const response = {
     summary: {},
     summaryMD: 'N/A',
-    textMD: 'Could not fetch build summary!'
+    textMD: 'Could not fetch build summary!',
+    summaryCompliance: POLICY_COMPLIANCE.NOT_ASSESSED
   };
   const summary = await getBuildSummary(appGUID,sandboxGUID,buildId);
   console.log(summary);
@@ -56,7 +57,7 @@ const getParseBuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buil
     const textMD = getBuildSumaryDetails(summary);
     response.summaryMD = summaryMD;
     response.textMD = textMD;
-    
+    response.summaryCompliance = summary.policy_compliance_status;
     //console.log(textMD);
     //console.log(summaryMD);
   } else {
@@ -67,20 +68,15 @@ const getParseBuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buil
 
 const getBuildSummaryMarkDown = (buildSummary,reportLink,buildInfo) => {
     let sandbox = false;
-    const policyComplianceStatus = (buildInfo && buildInfo['$'] && buildInfo['$'].policy_compliance_status) ? 
-      buildInfo['$'].policy_compliance_status :
-      buildSummary.policy_compliance_status;
+    const policyComplianceStatus = buildSummary.policy_compliance_status;
     let summaryHeading = `> Veracode Application: __${buildSummary.app_name}__  `;
     if (buildSummary.sandbox_name && buildSummary.sandbox_name.length>0) {
       sandbox = true;
       summaryHeading = `${summaryHeading}\n> Sandbox name: __${buildSummary.sandbox_name}__  `;
     }
     summaryHeading = `${summaryHeading}\n> Policy name: __${buildSummary.policy_name}__  `;
-    if (!sandbox) {
-      summaryHeading = `${summaryHeading}\n> Compliance status: __${policyComplianceStatus}__   \n`;
-    } else {
-      summaryHeading = `${summaryHeading}\n> Compliance status: __${POLICY_COMPLIANCE.NOT_ASSESSED}__   \n`;
-    }
+    summaryHeading = `${summaryHeading}\n> Compliance status: __${policyComplianceStatus}__   \n`;
+    
 
     const icon = policyIconMd(policyComplianceStatus);
 
@@ -89,7 +85,8 @@ const getBuildSummaryMarkDown = (buildSummary,reportLink,buildInfo) => {
     const scaSummary = parseSCASummary(buildSummary[SCA_SUMMARY_SECTION]);
 
     // console.log(summary);
-    let outputSummary = `${summaryHeading}  \n  ${(!sandbox) ? icon : ''} \n  ${reportLink}  \n  ${staticSummary}  \n\n  ${changes}`;
+    //let outputSummary = `${summaryHeading}  \n  ${(!sandbox) ? icon : ''} \n  ${reportLink}  \n  ${staticSummary}  \n\n  ${changes}`;
+    let outputSummary = `${summaryHeading}  \n  ${icon}  \n  ${reportLink}  \n  ${staticSummary}  \n\n  ${changes}`;
     if (scaSummary && scaSummary.length>0) {
       outputSummary = `${outputSummary}  \n\n  ${scaSummary}`;
     }
