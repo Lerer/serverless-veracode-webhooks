@@ -9,6 +9,7 @@ const POLICY_COMPLIANCE = {
 }
 
 const SCA_SUMMARY_SECTION = 'software_composition_analysis';
+const STATIC_SUMMARY_SECTION = 'static-analysis';
 
 const getBuildSummary = async (appGUID,sandboxGUID,buildId) => {
     console.log('getBuildSummary - START');
@@ -47,9 +48,9 @@ const getParseBuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buil
     textMD: 'Could not fetch build summary!'
   };
   const summary = await getBuildSummary(appGUID,sandboxGUID,buildId);
-  //console.log(summary);
+  console.log(summary);
   response.summary = summary;
-  if (summary && summary['static-analysis'] && summary['static-analysis'].published_date && summary['static-analysis'].published_date.length>0) {
+  if (summary && summary[STATIC_SUMMARY_SECTION] && summary[STATIC_SUMMARY_SECTION].published_date && summary[STATIC_SUMMARY_SECTION].published_date.length>0) {
     const reportLink = `[View Report](https://analysiscenter.veracode.com/auth/index.jsp#ViewReportsResultSummary:${orgID}:${appID}:${buildId})`;
     const summaryMD = getBuildSummaryMarkDown(summary,reportLink,buildInfo);
     const textMD = getBuildSumaryDetails(summary);
@@ -63,50 +64,6 @@ const getParseBuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buil
   }
   return response;
 };
-
-const getParseSCABuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buildInfo) => {
-  const response = {
-    summary: {},
-    summaryMD: 'N/A',
-    textMD: 'Could not fetch build summary!'
-  };
-  const summary = await getBuildSummary(appGUID,sandboxGUID,buildId);
-  //console.log(summary);
-  response.summary = summary;
-  if (summary && summary[SCA_SUMMARY_SECTION] && summary[SCA_SUMMARY_SECTION].sca_service_available && summary[SCA_SUMMARY_SECTION].sca_service_available=== true) {
-    console.log(`Found SCA results to report for build ${buildId}`);
-    const reportLink = `[View Report](https://analysiscenter.veracode.com/auth/index.jsp#ViewReportsResultSummary:${orgID}:${appID}:${buildId})`;
-    const summaryMD = getSCASummaryMarkDown(summary,reportLink,buildInfo);
-    const textMD = summaryMD;
-    response.summaryMD = summaryMD;
-    response.textMD = textMD;
-    
-    console.log(textMD);
-    console.log(summaryMD);
-  } else {
-    console.log(`Could not find SCA summary report for build ${buildId}`);
-    console.log(summary);
-  }
-}
-
-/*
-  "software_composition_analysis": {
-    "third_party_components": 0,
-    "violate_policy": true,
-    "components_violated_policy": 0,
-    "blacklisted_components": 0,
-    "sca_service_available": true
-  }
-*/
-const getSCASummaryMarkDown = (buildSummary,reportLink,buildInfo) => {
-  const SCASummary = buildSummary[SCA_SUMMARY_SECTION];
-  let summaryHeading = `> Number of 3rd party components: __${SCASummary.third_party_components}__`;
-  summaryHeading = `${summaryHeading}\n> Number of components violeting policy: __${SCA_SUMMARY_SECTION.components_violated_policy}__`;
-  summaryHeading = `${summaryHeading}\n> Overall violeting policy: __${SCA_SUMMARY_SECTION.violate_policy}__`;
-  let outputSummary = `${summaryHeading}`;
-
-  return outputSummary;
-}
 
 const getBuildSummaryMarkDown = (buildSummary,reportLink,buildInfo) => {
     let sandbox = false;
@@ -127,12 +84,15 @@ const getBuildSummaryMarkDown = (buildSummary,reportLink,buildInfo) => {
 
     const icon = policyIconMd(policyComplianceStatus);
 
-    const summary = parseSummary(buildSummary.severity);
+    const staticSummary = parseSummary(buildSummary.severity);
     const changes = parseChanges(buildSummary['flaw-status']);
+    const scaSummary = parseSCASummary(buildSummary[SCA_SUMMARY_SECTION]);
 
     // console.log(summary);
-    let outputSummary = `${summaryHeading}  \n  ${(!sandbox) ? icon : ''} \n  ${reportLink}  \n  ${summary}  \n\n  ${changes}`;
-
+    let outputSummary = `${summaryHeading}  \n  ${(!sandbox) ? icon : ''} \n  ${reportLink}  \n  ${staticSummary}  \n\n  ${changes}`;
+    if (scaSummary && scaSummary.length>0) {
+      outputSummary = `${outputSummary}  \n\n  ${scaSummary}`;
+    }
     return outputSummary;
 }
 
@@ -146,7 +106,7 @@ const getBuildSumaryDetails = (buildSummary) => {
 }
 
 const parseSummary = (severities) => {
-  let summary = 'Severity | Total \n --- | ---:'
+  let summary = '## Static Scan Summary:  \nSeverity | Total \n --- | ---:'
   severities.map(sev => {
     // console.log(sev._attributes);
     //console.log(sev);
@@ -178,6 +138,18 @@ const parseChanges = (flawStatus) => {
     status = `${status} Total | ${flawStatus.total}\n`;
     status = `${status} Not mitigated | ${flawStatus.not_mitigated}\n`;
     return status;
+}
+
+const parseSCASummary = (SCASummary) => {
+  if (SCASummary && SCASummary['third_party_components'] && SCASummary['third_party_components']>0) {
+    let scaSummary = '## Software Composition Analysis Summary:  \n';
+    scaSummary = `${scaSummary} - Total detected 3rd Party Components: ${SCASummary['third_party_components']}\n`;
+    scaSummary = `${scaSummary} - Components Violating Policy: ${SCASummary['components_violated_policy']}\n`;
+    scaSummary = `${scaSummary} - Overall SCA Violating Policy: __${SCASummary['violate_policy']}__\n`;
+    return scaSummary;
+  } else {
+    return '';
+  }
 }
 
 const number2severity = (numStr) => {
@@ -222,6 +194,5 @@ module.exports = {
   getBuildSummaryMarkDown,
   getBuildSumaryDetails,
   getParseBuildSummary,
-  getParseSCABuildSummary,
   POLICY_COMPLIANCE
 };

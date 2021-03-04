@@ -8,7 +8,9 @@ const installationId = process.env.GITHUB_APP_INSTALL_ID;
 const begin = '-----BEGIN RSA PRIVATE KEY-----';
 const end = '-----END RSA PRIVATE KEY-----';
 
-const TEST_RUN_TITLE = 'Veracode Static Scan Results';
+const CHECK_NAME = 'Veracode Upload and Scan';
+const CHECK_RESULT_TITLE = `${CHECK_NAME} Results`;
+//const TEST_RUN_TITLE = 'Veracode Static Scan Results';
 
 const CONCLUSION = {
     SUCCESS : 'success', 
@@ -60,7 +62,7 @@ const createCheckRun = async (owner,repo,headSHA) => {
         check = await appOctokit.checks.create({
             owner,
             repo,
-            name: 'Veracode Static Scan',
+            name: CHECK_NAME,
             status: 'queued',
             head_sha: headSHA
         });
@@ -106,7 +108,7 @@ const closeCheckRun = async (appGUID,sandboxGUID, buildId, checkRunId) => {
         conclusion: 'neutral',
         output: {
             summary: summaryMD,
-            title: TEST_RUN_TITLE,
+            title: CHECK_RESULT_TITLE,
             text: textMD
         }
     });
@@ -165,6 +167,6 @@ module.exports = {
     baseSQSMessageFromGithubEvent,
     updateCheckRun,
     closeCheckRun,
-    TEST_RUN_TITLE,
+    CHECK_RESULT_TITLE,
     CONCLUSION
 }

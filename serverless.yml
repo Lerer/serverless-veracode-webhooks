@@ -69,7 +69,7 @@ functions:
   veracodeForGithubBuildProcessor:
     handler: handler.sqsSingleScanSample
     memorySize: 128
-    timeout: 12
+    timeout: 15
     environment:
       API_ID: ${env:API_ID}
       API_KEY: ${env:API_KEY}

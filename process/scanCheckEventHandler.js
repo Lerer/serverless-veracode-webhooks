@@ -82,7 +82,7 @@ const handleEvent = async (customEvent) => {
 					sqsBaseMessage.repository_name,
 					sqsBaseMessage.commit_sha);
 				console.log('New check run requested');
-				console.log(newCheckRun);
+				//console.log(newCheckRun);
 
 				if (newCheckRun) {
 					// Adding the check run id to the sqs attributes
@@ -132,7 +132,7 @@ const handleEvent = async (customEvent) => {
 						conclusion: checkRun.CONCLUSION.SKIPPED,
 						output: {
 							summary: 'Issue with calculating recheck time. Bailing out!',
-							title: checkRunHandler.TEST_RUN_TITLE,
+							title: checkRunHandler.CHECK_RESULT_TITLE,
 						//	text: parsedSummary.textMD
 						}
 					});
@@ -151,7 +151,7 @@ const handleEvent = async (customEvent) => {
 				// only update if needed
 				if (!recordBody.pre_calculated_updated || complianceStatus!==buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
 					const parsedSummary = await buildSummaryHandler.getParseBuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
-					console.log(parsedSummary);
+					//console.log(parsedSummary);
 					const conclusion = calculateConclusion(complianceStatus,sandboxGUID); 
 					console.log(`Current scan conclusion: '${conclusion}'`);
 					const checkRunFinished = await checkRun.updateCheckRun(
@@ -163,7 +163,7 @@ const handleEvent = async (customEvent) => {
 							conclusion,
 							output: {
 								summary: parsedSummary.summaryMD,
-								title: checkRun.TEST_RUN_TITLE,
+								title: checkRun.CHECK_RESULT_TITLE,
 								text: parsedSummary.textMD
 							}
 						});
@@ -193,7 +193,7 @@ const handleEvent = async (customEvent) => {
 						conclusion: checkRun.CONCLUSION.FAILURE,
 						output: {
 							summary: `Unknow scan status: ${buildInfo.analysis_unit['$'].status}`,
-							title: checkRun.TEST_RUN_TITLE
+							title: checkRun.CHECK_RESULT_TITLE
 						}
 					});
 				console.log(checkRunFailed);
@@ -203,7 +203,7 @@ const handleEvent = async (customEvent) => {
 				if (currentStatus !== recordBody.previous_scan_status) {
 					// Sending update to the Static check
 					console.log(`Status changed from ${recordBody.previous_scan_status} to ${buildInfo.analysis_unit['$'].status} - sending update`)
-					console.log(JSON.stringify(eventAttrs));
+					//console.log(JSON.stringify(eventAttrs));
 					const reportingStatus = getGithubStatusFromBuildStatus(buildInfo);
 					const sandboxName = (eventAttrs.sandboxName && eventAttrs.sandboxName.stringValue) ? eventAttrs.sandboxName.stringValue : undefined;
 					const checkRunUpdate = await checkRun.updateCheckRun(
@@ -214,12 +214,12 @@ const handleEvent = async (customEvent) => {
 							status: reportingStatus.status,
 							conclusion: reportingStatus.conclusion,
 							output: {
-								title: checkRun.TEST_RUN_TITLE,
+								title: checkRun.CHECK_RESULT_TITLE,
 								summary: getStatusChangeSummary(eventAttrs.appName.stringValue,sandboxName, eventAttrs.buildID.stringValue),//`Build ${eventAttrs.buildID.stringValue} submitted. Awaiting scan results.`,
 								text: `Veracode scan status update: ${buildInfo.analysis_unit['$'].status}`
 							}
 						});
-					console.log(checkRunUpdate);
+					//console.log(checkRunUpdate);
 					console.log('Github check run updated');
 
 					if (currentStatus === buildInfoHandler.STATUS.PRESCAN_FINISHED || 
