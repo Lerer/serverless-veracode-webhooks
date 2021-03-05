@@ -8,11 +8,11 @@ __Note__ - The solution supports __only__ GitHub workflow triggered by `push` an
 
 ## Output Example:
 <p align="center">
-  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-summary-heading.png?raw=true" width="350px" alt="Github Push check"/>
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-summary-heading-uas.png?raw=true" width="350px" alt="Github Push check"/>
 </p>
   
 <p align="center">
-  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-check-output.png?raw=true" width="600px" alt="Github Push check"/>
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-check-output-sca.png?raw=true" width="600px" alt="Github Push check"/>
 </p>
 
 ## The Savings
@@ -128,9 +128,10 @@ We will do that by creating an Application in the GitHub account.
 
 
 ### 6. Create an AWS Secret to encrypt and store few attributes
-WIP - Will update once is ready   
+<details><summary>WIP - Will update once is ready</summary> <p> 
 > Skip this stage until it will be ready 
-
+</p>
+</details>
 
 ### 7. Update more environment variables
 1. In `.env` and update the attributes

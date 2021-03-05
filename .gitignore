@@ -10,3 +10,7 @@ jspm_packages
 
 # ignore env
 .env
+policy.json
+
+#veracode
+veracode-plugin.conf
