@@ -48,6 +48,10 @@ const handleEvent = async (customEvent) => {
 		const eventAttrs = record.messageAttributes;
 		const recordBody = JSON.parse(record.body);
 		console.log(recordBody);
+		if (recordBody.github_event === 'check_run') {
+			console.log('Not processing [check_run] event');
+			return;
+		}
 		let response = {};
 		if (!eventAttrs.appLegacyID) {
 			const sandboxName = eventAttrs.sandboxName ? eventAttrs.sandboxName.stringValue : undefined;
@@ -179,6 +183,21 @@ const handleEvent = async (customEvent) => {
 						SCAN_CHECK_QUEUE_URL);
 					console.log('Scan check finish - Re-queue for recheck as policy is being calculated');
 				} else {
+					// Add import issues action
+					await checkRun.updateCheckRun(
+						recordBody.repository_owner_login,
+						recordBody.repository_name,
+						recordBody.check_run_id,
+						{
+							actions: [
+								{
+									label: 'Import Findings',
+									description: 'Import findings as repositories issues',
+									identifier: 'import_findings'
+								}
+							]
+						}
+					);
 					console.log('Scan check finish - no recheck is required');
 				}
 
@@ -238,7 +257,7 @@ const handleEvent = async (customEvent) => {
 	console.log('handleEvent - END')
 }
 
-const calculateConclusion = (complianceStatus) => 
+const calculateConclusion = (complianceStatus) => {
 	console.log(`scancheckEventHandler -> calculateConclusion for : '${complianceStatus}'`)
 	if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.PASS) {
 		return checkRun.CONCLUSION.SUCCESS;

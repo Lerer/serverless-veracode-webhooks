@@ -13,9 +13,10 @@ const SCAN_CHECK_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCO
 exports.webhookListen = (event,context,callback) => {
     console.log(event);
     const body = JSON.parse(event.body); 
-    body.github_event = event.headers['x-github-event'];
-    //console.log(body);
-    if (!body.repository || !body.repository.owner || !body.data) {
+	console.log(`BODY:\n${body}`);
+    body.github_event = event.headers['x-github-event'] || event.headers['X-GitHub-Event'];
+    console.log(`Event: ${body.github_event}`);
+    if (!body.repository || !body.repository.owner || (!body.data && body.github_event!=='check_run')) {
         //console.log(event);
         return callback(null, {
 			headers: {
