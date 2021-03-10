@@ -31,7 +31,7 @@ const request = (inputMethod,host,path, params) => {
         host, path,
         queryString,
         method);
-
+    console.log(`Requesting: ${method} ${PROTOCOL + host + path}`);
     return Axios.request({
         method,
         headers:{

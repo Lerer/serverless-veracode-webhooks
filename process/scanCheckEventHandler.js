@@ -84,7 +84,11 @@ const handleEvent = async (customEvent) => {
 				const newCheckRun = await checkRun.createCheckRun(
 					sqsBaseMessage.repository_owner_login,
 					sqsBaseMessage.repository_name,
-					sqsBaseMessage.commit_sha);
+					sqsBaseMessage.commit_sha,
+					{
+						external_id: `${eventAttrs.appGUID}:${eventAttrs.sandboxGUID?eventAttrs.sandboxGUID:'policy'}:unknown`
+					}
+				);
 				console.log('New check run requested');
 				//console.log(newCheckRun);
 
@@ -123,15 +127,26 @@ const handleEvent = async (customEvent) => {
 						dataType: "String",
 						stringValue: buildInfo['$'].build_id
 					}
+					// update the external ID
+					const checkRunID = eventAttrs.checkRunID.stringValue;
+					await checkRun.updateCheckRun(
+						recordBody.repository_owner_login,
+						recordBody.repository_name,
+						recordBody.check_run_id,
+						{
+							external_id: `${eventAttrs.appGUID.stringValue}:${eventAttrs.sandboxGUID?eventAttrs.sandboxGUID.stringValue:'policy'}:${eventAttrs.buildID.stringValue}`
+						}
+					);
 				}
 			};
 
 			if (scanRecheckTime === RECHECK_ACTION.STOP) {
-				const checkRunID = eventAttrs.checkRunID.stringValue;
+				//const checkRunID = eventAttrs.checkRunID.stringValue;
 				await checkRun.updateCheckRun(
-					sqsBaseMessage.repository_owner_login,
-					sqsBaseMessage.repository_name,
-					checkRunID,{
+					recordBody.repository_owner_login,
+					recordBody.repository_name,
+					recordBody.check_run_id,
+					{
 						status: 'completed',
 						conclusion: checkRun.CONCLUSION.SKIPPED,
 						output: {

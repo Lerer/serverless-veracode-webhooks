@@ -59,6 +59,7 @@ functions:
   githubListener:
     handler: githubHandler.webhookListen
     memorySize: 128
+    timeout: 10
     events:
       - http:
           path: /github
@@ -69,7 +70,7 @@ functions:
   veracodeForGithubBuildProcessor:
     handler: handler.sqsSingleScanSample
     memorySize: 128
-    timeout: 15
+    timeout: 20
     environment:
       API_ID: ${env:API_ID}
       API_KEY: ${env:API_KEY}

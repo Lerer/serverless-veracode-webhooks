@@ -169,7 +169,10 @@ We will do that by creating an Application in the GitHub account.
 * look for the `Service Information` section and note the `endpoint` which should look similar to: 
   * `POST - https://kjhkjhz7l8.execute-api.ap-southeast-2.amazonaws.com/dev/github`
 
-### 8. Configure your repositories pipeline to call the notifier
+### 8. Configure Webhook
+To support further actions such as request to import findings, please update the GitHub application settings with the same Webhook URL you got from the `endpoint` URL collected at stage 7
+
+### 9. Configure your repositories pipeline to call the notifier
 The following steps will take you through the GitHub workflow configuration to call the deployed solution.
 > Important - this step will only work if you configure the workflow for a repository which is permitted access when you install the GitHub application __#4.4__
 

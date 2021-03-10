@@ -34,19 +34,25 @@ exports.webhookListen = (event,context,callback) => {
 		"Origin": {
 			   DataType: "String",
 			   StringValue: "GitHub"
-		 },
-		"appName": {
-            DataType: "String",
-            StringValue: body.data.veracode_app_name
-        }
-    };
+		 }
+	};
+
+	if (body.data) {
 	
-    if (body.data.veracode_sandbox_name && body.data.veracode_sandbox_name.length >0) {
-		msgAttrs.sandboxName = {
-			DataType: "String",
-			StringValue: body.data.veracode_sandbox_name
+		if (body.data.veracode_app_name) {
+			msgAttrs.appName = {
+					DataType: "String",
+					StringValue: body.data.veracode_app_name
+			};
 		}
-    }
+	
+		if (body.data.veracode_sandbox_name && body.data.veracode_sandbox_name.length >0) {
+			msgAttrs.sandboxName = {
+				DataType: "String",
+				StringValue: body.data.veracode_sandbox_name
+			}
+		}
+	}
     
     const params = {
 		// Remove DelaySeconds parameter and value for FIFO queues
