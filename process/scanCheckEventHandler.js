@@ -5,6 +5,8 @@ const buildSummaryHandler = require('../util/apis/veracode/buildSummary');
 
 const checkRun = require('../util/apis/github/checkRun');
 
+const importFindingProcessHandler = require('./importFindings');
+
 const AWS = require('aws-sdk');
 //const buildInfo = require('../util/apis/buildInfo');
 
@@ -49,8 +51,9 @@ const handleEvent = async (customEvent) => {
 		const recordBody = JSON.parse(record.body);
 		console.log(recordBody);
 		if (recordBody.github_event === 'check_run') {
-			console.log('Not processing [check_run] event');
-			return;
+			//await importFindingProcessHandler.handleEvent(recordBody);
+			console.log(`Error - wrong place to handle this type of event`);
+			continue;
 		}
 		let response = {};
 		if (!eventAttrs.appLegacyID) {

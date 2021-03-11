@@ -9,6 +9,7 @@ const AWS_REGION = process.env.TARGET_REGION;
 AWS.config.update({region: AWS_REGION});
 
 const SCAN_CHECK_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/ScanChecks`;
+const IMPORT_FINDINGS_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/ImportFindings`;
 
 exports.webhookListen = (event,context,callback) => {
     console.log(event);
@@ -27,7 +28,7 @@ exports.webhookListen = (event,context,callback) => {
 	  	});
 
 	} else {
-        console.log('Event for Github scan check');
+        console.log('Allowed event from Github');
     }
 
     const msgAttrs = {
@@ -62,6 +63,14 @@ exports.webhookListen = (event,context,callback) => {
 	   	QueueUrl: SCAN_CHECK_QUEUE_URL
     };
 
+	if (body.github_event==='check_run') {
+		if (body.requested_action && body.requested_action.identifier === 'import_findings') {
+			params.QueueUrl = IMPORT_FINDINGS_QUEUE_URL;
+		} else {
+			console.log(`Error - unknown action identifier: [${body.requested_action?body.requested_action.identifier:'No requested_action'}]`);
+		}
+	}
+
     const responseBody = {
 		baseMessage: "Process Github request for Veracode Scan check!",
 		message: ""
@@ -78,7 +87,7 @@ exports.webhookListen = (event,context,callback) => {
 			responseCode = 500;
 	   	} else {
 			console.log("Message sent: ", data.MessageId);
-			responseBody.message = `Sent to ${SCAN_CHECK_QUEUE_URL}`;
+			responseBody.message = `Sent to ${params.QueueUrl}`;
         	responseBody.messageId = data.MessageId;
 	   	}
 	   	const response = {

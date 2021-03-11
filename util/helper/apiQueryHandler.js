@@ -7,7 +7,7 @@ const PROTOCOL = 'https://';
 const DEFAULT_METHOD = 'GET';
 
 const request = (inputMethod,host,path, params) => {
-    console.log('api query handler');
+    //console.log('api query handler');
     let method = inputMethod || DEFAULT_METHOD; 
     // funky for the Veracode HMAC generation
     let queryString = '';
@@ -31,7 +31,7 @@ const request = (inputMethod,host,path, params) => {
         host, path,
         queryString,
         method);
-    console.log(`Requesting: ${method} ${PROTOCOL + host + path}`);
+    console.log(`Requesting: [${method} ${PROTOCOL + host + path}] with params: ${JSON.stringify(params)}`);
     return Axios.request({
         method,
         headers:{

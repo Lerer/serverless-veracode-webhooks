@@ -71,7 +71,7 @@ To utilize the content, you will need to implement the following:
 ### 3. AWS Policy for the deployment of the solution
 In order to provided the minimun policy required for the deployment of the solutions, we will need to generate a Policy. 
 
-1. Run the command: __`npm run genrate-permissions`__ which will generate a JSON format policy.
+1. Run the command: __`npm run generate-permissions`__ which will generate a JSON format policy.
    - This will only work correctly if you filled-in the environment variable in the previous stage
    - The policy is generates in the project root directory inside a file: __`policy.json`__
 2. Login to your AWS portal, navigate IAM Service and create a new policy
@@ -84,6 +84,10 @@ Serverless framework (this project), need a role in AWS which will allow it to d
 
 Example with explanaition how to deploy custom AWS IAM role:
 - [Customize the Serverless IAM Policy](https://serverless-stack.com/chapters/customize-the-serverless-iam-policy.html)
+
+Online Policy Generator
+- [Serverless Permission Policy Generato](https://open-sl.github.io/serverless-permission-generator/)
+> Note - the above generator may miss or generate over permissive policy
 
       
 ### 4. Configure Serverless to deploy to your AWS account
@@ -179,7 +183,7 @@ The following steps will take you through the GitHub workflow configuration to c
 Since the solution _act as_ asynchronic WebHook, we can send a full scan to the Veracode platform without waiting for it to complete.
 
    * Add the following attributes as repository SECRET
-     * `WEBHOOK_SECRET` - Secret for github webhook
+     * `WEBHOOK_SECRET` - Secret for github webhook which should be same as the one you applied in the Github Application Webhook secret
    * In your Github workflow configuration, use the official __[upload-and-scan](https://github.com/marketplace/actions/veracode-upload-and-scan)__ action to trigger a full scan
    * When you configure the above __action__, set:
      * `version: ${{ github.run_id }}`

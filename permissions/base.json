@@ -185,7 +185,8 @@
         "Effect": "Allow",
         "Action": "sqs:*",
         "Resource": [
-          "arn:aws:sqs:<AWSRegion>:<Account_ID>:ScanChecks"
+          "arn:aws:sqs:<AWSRegion>:<Account_ID>:ScanChecks",
+          "arn:aws:sqs:<AWSRegion>:<Account_ID>:ImportFindings"
         ]
       },
       {
