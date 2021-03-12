@@ -9,13 +9,15 @@ const AWS_REGION = process.env.TARGET_REGION;
 AWS.config.update({region: AWS_REGION});
 
 const SCAN_CHECK_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/ScanChecks`;
+const IMPORT_FINDINGS_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/ImportFindings`;
 
 exports.webhookListen = (event,context,callback) => {
     console.log(event);
     const body = JSON.parse(event.body); 
-    body.github_event = event.headers['x-github-event'];
-    //console.log(body);
-    if (!body.repository || !body.repository.owner || !body.data) {
+	console.log(`BODY:\n${body}`);
+    body.github_event = event.headers['x-github-event'] || event.headers['X-GitHub-Event'];
+    console.log(`Event: ${body.github_event}`);
+    if (!body.repository || !body.repository.owner || (!body.data && body.github_event!=='check_run')) {
         //console.log(event);
         return callback(null, {
 			headers: {
@@ -26,26 +28,32 @@ exports.webhookListen = (event,context,callback) => {
 	  	});
 
 	} else {
-        console.log('Event for Github scan check');
+        console.log('Allowed event from Github');
     }
 
     const msgAttrs = {
 		"Origin": {
 			   DataType: "String",
 			   StringValue: "GitHub"
-		 },
-		"appName": {
-            DataType: "String",
-            StringValue: body.data.veracode_app_name
-        }
-    };
+		 }
+	};
+
+	if (body.data) {
 	
-    if (body.data.veracode_sandbox_name && body.data.veracode_sandbox_name.length >0) {
-		msgAttrs.sandboxName = {
-			DataType: "String",
-			StringValue: body.data.veracode_sandbox_name
+		if (body.data.veracode_app_name) {
+			msgAttrs.appName = {
+					DataType: "String",
+					StringValue: body.data.veracode_app_name
+			};
 		}
-    }
+	
+		if (body.data.veracode_sandbox_name && body.data.veracode_sandbox_name.length >0) {
+			msgAttrs.sandboxName = {
+				DataType: "String",
+				StringValue: body.data.veracode_sandbox_name
+			}
+		}
+	}
     
     const params = {
 		// Remove DelaySeconds parameter and value for FIFO queues
@@ -54,6 +62,14 @@ exports.webhookListen = (event,context,callback) => {
 	   	MessageBody: JSON.stringify(body),
 	   	QueueUrl: SCAN_CHECK_QUEUE_URL
     };
+
+	if (body.github_event==='check_run') {
+		if (body.requested_action && body.requested_action.identifier === 'import_findings') {
+			params.QueueUrl = IMPORT_FINDINGS_QUEUE_URL;
+		} else {
+			console.log(`Error - unknown action identifier: [${body.requested_action?body.requested_action.identifier:'No requested_action'}]`);
+		}
+	}
 
     const responseBody = {
 		baseMessage: "Process Github request for Veracode Scan check!",
@@ -71,7 +87,7 @@ exports.webhookListen = (event,context,callback) => {
 			responseCode = 500;
 	   	} else {
 			console.log("Message sent: ", data.MessageId);
-			responseBody.message = `Sent to ${SCAN_CHECK_QUEUE_URL}`;
+			responseBody.message = `Sent to ${params.QueueUrl}`;
         	responseBody.messageId = data.MessageId;
 	   	}
 	   	const response = {

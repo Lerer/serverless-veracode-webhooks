@@ -5,6 +5,8 @@ const buildSummaryHandler = require('../util/apis/veracode/buildSummary');
 
 const checkRun = require('../util/apis/github/checkRun');
 
+// const importFindingProcessHandler = require('./importFindings');
+
 const AWS = require('aws-sdk');
 //const buildInfo = require('../util/apis/buildInfo');
 
@@ -48,6 +50,11 @@ const handleEvent = async (customEvent) => {
 		const eventAttrs = record.messageAttributes;
 		const recordBody = JSON.parse(record.body);
 		console.log(recordBody);
+		if (recordBody.github_event === 'check_run') {
+			//await importFindingProcessHandler.handleEvent(recordBody);
+			console.log(`Error - wrong place to handle this type of event`);
+			continue;
+		}
 		let response = {};
 		if (!eventAttrs.appLegacyID) {
 			const sandboxName = eventAttrs.sandboxName ? eventAttrs.sandboxName.stringValue : undefined;
@@ -80,7 +87,11 @@ const handleEvent = async (customEvent) => {
 				const newCheckRun = await checkRun.createCheckRun(
 					sqsBaseMessage.repository_owner_login,
 					sqsBaseMessage.repository_name,
-					sqsBaseMessage.commit_sha);
+					sqsBaseMessage.commit_sha
+					// ,{
+					// 	external_id: `${eventAttrs.appGUID}:${eventAttrs.sandboxGUID?eventAttrs.sandboxGUID:'policy'}:unknown`
+					// }
+				);
 				console.log('New check run requested');
 				//console.log(newCheckRun);
 
@@ -119,15 +130,26 @@ const handleEvent = async (customEvent) => {
 						dataType: "String",
 						stringValue: buildInfo['$'].build_id
 					}
+					// update the external ID
+					//const checkRunID = eventAttrs.checkRunID.stringValue;
+					await checkRun.updateCheckRun(
+						recordBody.repository_owner_login,
+						recordBody.repository_name,
+						recordBody.check_run_id
+						,{
+							external_id: `${eventAttrs.appGUID.stringValue}:${eventAttrs.sandboxGUID?eventAttrs.sandboxGUID.stringValue:'policy'}:${eventAttrs.buildID.stringValue}`
+						}
+					);
 				}
 			};
 
 			if (scanRecheckTime === RECHECK_ACTION.STOP) {
-				const checkRunID = eventAttrs.checkRunID.stringValue;
+				//const checkRunID = eventAttrs.checkRunID.stringValue;
 				await checkRun.updateCheckRun(
-					sqsBaseMessage.repository_owner_login,
-					sqsBaseMessage.repository_name,
-					checkRunID,{
+					recordBody.repository_owner_login,
+					recordBody.repository_name,
+					recordBody.check_run_id,
+					{
 						status: 'completed',
 						conclusion: checkRun.CONCLUSION.SKIPPED,
 						output: {
@@ -179,6 +201,21 @@ const handleEvent = async (customEvent) => {
 						SCAN_CHECK_QUEUE_URL);
 					console.log('Scan check finish - Re-queue for recheck as policy is being calculated');
 				} else {
+					// Add import issues action
+					await checkRun.updateCheckRun(
+						recordBody.repository_owner_login,
+						recordBody.repository_name,
+						recordBody.check_run_id,
+						{
+							actions: [
+								{
+									label: 'Import Findings',
+									description: 'Import findings as repositories issues',
+									identifier: 'import_findings'
+								}
+							]
+						}
+					);
 					console.log('Scan check finish - no recheck is required');
 				}
 
@@ -238,7 +275,7 @@ const handleEvent = async (customEvent) => {
 	console.log('handleEvent - END')
 }
 
-const calculateConclusion = (complianceStatus) => 
+const calculateConclusion = (complianceStatus) => {
 	console.log(`scancheckEventHandler -> calculateConclusion for : '${complianceStatus}'`)
 	if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.PASS) {
 		return checkRun.CONCLUSION.SUCCESS;

@@ -47,6 +47,7 @@ provider:
             - sqs:SendMessage
           Resource: 
             - { "Fn::GetAtt" : ["ScanChecks","Arn"]}
+            - { "Fn::GetAtt" : ["ImportFindings","Arn"]}
   environment: ${self:custom.settings}
   lambdaHashingVersion: 20201221
 
@@ -59,6 +60,7 @@ functions:
   githubListener:
     handler: githubHandler.webhookListen
     memorySize: 128
+    timeout: 10
     events:
       - http:
           path: /github
@@ -69,7 +71,7 @@ functions:
   veracodeForGithubBuildProcessor:
     handler: handler.sqsSingleScanSample
     memorySize: 128
-    timeout: 15
+    timeout: 20
     environment:
       API_ID: ${env:API_ID}
       API_KEY: ${env:API_KEY}
@@ -80,9 +82,28 @@ functions:
               - ScanChecks
               - Arn
           batchSize: 1
+  veracodePopulateGithubIssues:
+    handler: awsHandlers/populateGithubIssues.handler
+    memorySize: 128
+    timeout: 10
+    environment:
+      API_ID: ${env:API_ID}
+      API_KEY: ${env:API_KEY}
+    events:
+      - sqs:
+          arn: 
+            Fn::GetAtt:
+              - ImportFindings
+              - Arn
+          batchSize: 1
+
 resources:
   Resources:
     ScanChecks:
       Type: "AWS::SQS::Queue"
       Properties:
         QueueName: "ScanChecks"
+    ImportFindings:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "ImportFindings"

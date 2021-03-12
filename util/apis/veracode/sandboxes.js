@@ -37,8 +37,8 @@ const getSandboxByName = async (appGUID,sandboxName) => {
         const response = await apiUtil.request('GET','api.veracode.com',`/appsec/v1/applications/${appGUID}/sandboxes`,null);
         let sandboxes = response.data;
         if (sandboxes._embedded && sandboxes._embedded.sandboxes) {
-            sandboxes = sandboxes._embedded.sandboxes.filter((sandbox) => {
-                return (sandbox.name === sandboxName);
+            sandboxes = sandboxes._embedded.sandboxes.filter((sandboxElement) => {
+                return (sandboxElement.name === sandboxName);
             })
         }
         if (sandboxes.length===1){

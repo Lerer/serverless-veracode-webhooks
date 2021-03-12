@@ -21,8 +21,8 @@ const replaced = jsonTemplate.Statement.map((statement) => {
     if (typeof(resource)==='string') { 
         newResource = replaceResource(statement.Resource); 
     } else {
-        newResource = statement.Resource.map((resource) => {
-            return replaceResource(resource);
+        newResource = statement.Resource.map((resourceElement) => {
+            return replaceResource(resourceElement);
         })
     }
 
