@@ -6,7 +6,12 @@ const getScanFindings = async (applicationGUID,sandboxGUID,buildId) => {
     
     try {
         
-        const requestParameters = {};
+        const requestParameters = {
+            violates_policy:true,
+            size:1,
+            scantype:'STATIC'
+        };
+
         if (sandboxGUID) {
             requestParameters.context = sandboxGUID;
         }

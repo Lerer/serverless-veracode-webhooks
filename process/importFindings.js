@@ -22,7 +22,10 @@ const handleEvent = async (customEvent) => {
             console.log(`context: ${context}`);
             if (context.length===3) {
                 const findings = await findingsAPIHandler.getScanFindings(context[0],context[1],context[2]);
-                console.log(JSON.stringify(findings));
+                //console.log(JSON.stringify(findings));
+                if (findings._embedded && findings._embedded.findings) {
+                    await processFindings(findings._embedded.findings);
+                }
             } else {
                 console.log(`wrong context value: ${recordBody.check_run.external_id}`);
             }
@@ -31,6 +34,20 @@ const handleEvent = async (customEvent) => {
         }
     }
     console.log('Import Findings Event Handler - END');
+}
+
+const processFindings = async (findingsArray) => {
+    if (typeof findingsArray !== 'object') {
+        console.log(`Error trying to process findings where input is ${typeof findingsArray}`)
+    }
+    //Const precreateIssuesArray = 
+    return await findingsArray.map((finding) => parseStaticScanIssue(finding));
+}
+
+const parseStaticScanIssue = async (finding) => {
+    console.log('parseStaticScanIssue - START');
+    console.log(JSON.stringify(finding));
+    console.log('parseStaticScanIssue - END');
 }
 
 

@@ -58,8 +58,8 @@ const getParseBuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buil
     response.summaryMD = summaryMD;
     response.textMD = textMD;
     response.summaryCompliance = summary.policy_compliance_status;
-    //console.log(textMD);
-    //console.log(summaryMD);
+
+
   } else {
     console.log(`Could not find summary report for build ${buildId}`);
   }
@@ -67,11 +67,11 @@ const getParseBuildSummary = async (orgID,appID,appGUID,sandboxGUID,buildId,buil
 };
 
 const getBuildSummaryMarkDown = (buildSummary,reportLink,buildInfo) => {
-    let sandbox = false;
+
     const policyComplianceStatus = buildSummary.policy_compliance_status;
     let summaryHeading = `> Veracode Application: __${buildSummary.app_name}__  `;
     if (buildSummary.sandbox_name && buildSummary.sandbox_name.length>0) {
-      sandbox = true;
+
       summaryHeading = `${summaryHeading}\n> Sandbox name: __${buildSummary.sandbox_name}__  `;
     }
     summaryHeading = `${summaryHeading}\n> Policy name: __${buildSummary.policy_name}__  `;

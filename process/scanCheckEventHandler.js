@@ -5,7 +5,7 @@ const buildSummaryHandler = require('../util/apis/veracode/buildSummary');
 
 const checkRun = require('../util/apis/github/checkRun');
 
-const importFindingProcessHandler = require('./importFindings');
+// const importFindingProcessHandler = require('./importFindings');
 
 const AWS = require('aws-sdk');
 //const buildInfo = require('../util/apis/buildInfo');
@@ -135,10 +135,10 @@ const handleEvent = async (customEvent) => {
 					await checkRun.updateCheckRun(
 						recordBody.repository_owner_login,
 						recordBody.repository_name,
-						recordBody.check_run_id,
-						{
-							external_id: `${eventAttrs.appGUID.stringValue}:${eventAttrs.sandboxGUID?eventAttrs.sandboxGUID.stringValue:'policy'}:${eventAttrs.buildID.stringValue}`
-						}
+						recordBody.check_run_id
+						// ,{
+						// 	external_id: `${eventAttrs.appGUID.stringValue}:${eventAttrs.sandboxGUID?eventAttrs.sandboxGUID.stringValue:'policy'}:${eventAttrs.buildID.stringValue}`
+						// }
 					);
 				}
 			};

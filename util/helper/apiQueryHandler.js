@@ -12,19 +12,13 @@ const request = (inputMethod,host,path, params) => {
     // funky for the Veracode HMAC generation
     let queryString = '';
     if(params !== null && Object.keys(params).length>0) {
-        var keys = Object.keys(params);
-        queryString = '?';
-        let index = 0;
-        for(var key in keys)
-        {   
-            if(index > 0)
-                queryString += '&';
-            //console.log(params[keys[key]]);
-            queryString += keys[key] + '=' + (params[keys[key]]).replace(/\s/g, "+");// params[keys[key]];
-            index++;
-        }
+        const preJoined = Object.entries(params).map(([key, val]) => {
+            return `${key}=${String(val).replace(/\s/g, "+")}`;
+        });
+        
+        queryString = '?' + preJoined.join('&');
     }
-    //console.log('before Axios.request');
+
     const authHeader = veracodeHmac.generateHeader(
         credHandler.getApiId()||'', 
         credHandler.getApiKey()||'', 
