@@ -27,9 +27,7 @@ exports.webhookListen = (event,context,callback) => {
 			body: "Not the right event"
 	  	});
 
-	} else {
-        console.log('Allowed event from Github');
-    }
+	} 
 
     const msgAttrs = {
 		"Origin": {
@@ -67,7 +65,7 @@ exports.webhookListen = (event,context,callback) => {
 		if (body.requested_action && body.requested_action.identifier === 'import_findings') {
 			params.QueueUrl = IMPORT_FINDINGS_QUEUE_URL;
 		} else {
-			console.log(`Error - unknown action identifier: [${body.requested_action?body.requested_action.identifier:'No requested_action'}]`);
+			console.log(`Error - unknown action identifier`);
 		}
 	}
 
