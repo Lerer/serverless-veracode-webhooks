@@ -13,7 +13,6 @@ const getAuthApp = async () => {
     const content = pem.substring(begin.length,pem.length-end.length);
 
     const parsedPEM = begin + content.replace(/\s+/gi, "\n") + end;
-    //console.log(parsedPEM.length);
   
     try {
         const appOctokit = new Octokit({

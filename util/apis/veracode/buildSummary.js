@@ -29,10 +29,6 @@ const getBuildSummary = async (appGUID,sandboxGUID,buildId) => {
             
         jsonBuildSummary = response.data;
         
-        //console.log('getBuildSummary - printing result');
-        //console.log(jsonBuildSummary);
-        //console.log('getBuildSummary - finish printing results');
-        
     } catch (e) {
         console.log(e.message, e);
         console.log(JSON.stringify(e,null,2));
@@ -84,8 +80,6 @@ const getBuildSummaryMarkDown = (buildSummary,reportLink,buildInfo) => {
     const changes = parseChanges(buildSummary['flaw-status']);
     const scaSummary = parseSCASummary(buildSummary[SCA_SUMMARY_SECTION]);
 
-    // console.log(summary);
-    //let outputSummary = `${summaryHeading}  \n  ${(!sandbox) ? icon : ''} \n  ${reportLink}  \n  ${staticSummary}  \n\n  ${changes}`;
     let outputSummary = `${summaryHeading}  \n  ${icon}  \n  ${reportLink}  \n  ${staticSummary}  \n\n  ${changes}`;
     if (scaSummary && scaSummary.length>0) {
       outputSummary = `${outputSummary}  \n\n  ${scaSummary}`;
@@ -105,8 +99,6 @@ const getBuildSumaryDetails = (buildSummary) => {
 const parseSummary = (severities) => {
   let summary = '## Static Scan Summary:  \nSeverity | Total \n --- | ---:'
   severities.map(sev => {
-    // console.log(sev._attributes);
-    //console.log(sev);
     const sevName = number2severity(sev.level)
     let totalForSev = 0
     let subCat = ''

@@ -21,10 +21,8 @@ const getSandbox = async (appGUID,sandboxGUID) => {
     try {
         const response = await apiUtil.request('GET','api.veracode.com',`/appsec/v1/applications/${appGUID}/sandboxes/${sandboxGUID}`,null);
         application = response.data;
-        //console.log(response.data._embedded);
     } catch (error) {
         console.error(error.response);
-        //console.error(error);
     }
     console.info('end getSandbox');
     return application;
@@ -45,7 +43,6 @@ const getSandboxByName = async (appGUID,sandboxName) => {
             sandbox = sandboxes[0];
         } else {
             console.info(`getSandboxByName - Could not find the sandbox ny name [${sandboxName}]`);
-            //console.log(response.data);
         }
         console.log(sandbox);
     } catch (error) {
