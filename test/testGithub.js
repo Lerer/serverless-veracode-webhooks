@@ -56,12 +56,6 @@ const testCreateIssueComment = async () => {
 };
 
 const testUpdateCheckrun = async () => {
-    // const summary = await buildSummaryHandler.getBuildSummary('6cb54471-ed14-4ebc-a1a7-54987a40dcb4',undefined,'10288400') 
-    // console.log(summary);
-    // const summaryMD = buildSummaryHandler.getBuildSummaryMarkDown(summary);
-    // const textMD = buildSummaryHandler.getBuildSumaryDetails(summary);
-    // console.log(textMD);
-    // console.log(summaryMD);
     const parsedSummary = await buildSummaryHandler.getParseBuildSummary('6cb54471-ed14-4ebc-a1a7-54987a40dcb4',undefined,'10288400');
     const updateCheckResponse = await checkRunHandler.updateCheckRun('Lerer','veracode-async',1666740521,{
         status: 'completed',
@@ -77,6 +71,11 @@ const testUpdateCheckrun = async () => {
     console.log(updateCheckResponse);
 }
 
+const testListIssue = async () => {
+
+}
+
 
 //testCreateIssueComment();
-testUpdateCheckrun();
+//testUpdateCheckrun();
+testListIssue();
