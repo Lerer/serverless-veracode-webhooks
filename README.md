@@ -117,6 +117,7 @@ We will do that by creating an Application in the GitHub account.
      * Metadata: `Read-only`
 2. Make a note of the GitHub Application ID as we will need it to configure our solution.
    * See `App ID: <XXXXXX>` at the `General` -> `about` section of the application you just created 
+   * In addition, observe the URL for the app name `https://github.com/settings/apps/[GITHUB_APP_NAME]`
 3. Genrate a private key for the application and save it. We will need it to get our serverless solution access to the repositories. (Scroll down to the bottom of the General sections of the Application)
    * Use the following instructions: [Generating a private key](https://docs.github.com/apps/building-github-apps/authentication-options-for-github-apps/#generating-a-private-key)
 4. Install the application you created
@@ -141,10 +142,11 @@ We will do that by creating an Application in the GitHub account.
 1. In `.env` and update the attributes
    * API_ID=[Veracode API Key]
    * API_KEY=[Veracode API Secret]
-   * PEM=[content of the private key created at #4.3.]
+   * PEM=[content of the private key created at #5.3.]
      * The format will be `-----BEGIN RSA PRIVATE KEY----- MIIEpAIBAAKASJEAn08WHUF27jUocPGwVVLxOo.. ... I2l3ZJctx5YsxHhtFvA8jFdsRDYe0Oz66Nt2453PEIF42fH26gtLjFSbrKrxGcti 4Or54WvL0y2+UXi5pQkcvoaMfa4yx61blSqZAQw1a4aWLGyz+8AvAg== -----END RSA PRIVATE KEY-----`.
      * __Single space__ separated and __NOT__ newline separated! 
-   * GITHUB_APP_ID=[Application ID gathered at #4.2]
+   * GITHUB_APP_NAME=[Application Name you noted at #5.2]
+   * GITHUB_APP_ID=[Application ID gathered at #5.2]
    * GITHUB_APP_INSTALL_ID=[Application installation ID gathered at #4.4]
 2. (Optional) If you logged in to the SERVERLESS dashboard (free), and would like to view and monitor API endpoint and functions invocation:
    * Login to your Serverless account 
