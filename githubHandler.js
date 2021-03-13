@@ -18,8 +18,8 @@ exports.webhookListen = (event,context,callback) => {
     body.github_event = event.headers['x-github-event'] || event.headers['X-GitHub-Event'];
     console.log(`Event: ${body.github_event}`);
     if (!body.repository || !body.repository.owner || (!body.data && body.github_event!=='check_run')) {
-        //console.log(event);
-        return callback(null, {
+
+		return callback(null, {
 			headers: {
 				"Content-Type": "application/json",
 			},

@@ -20,7 +20,6 @@ const getApplicationById = async (appId) => {
     if (appId && appId!==null && appId.length>0){
         try {
             const response = await apiUtil.request('GET','api.veracode.com',`/appsec/v1/applications/${appId}`, null);
-            //console.log(response.data);
             application = response.data;
             console.log(application);
         } catch (error) {
@@ -38,10 +37,8 @@ const getApplicationByLegacyId = async (legacyAppId) => {
     try {
         const response = await apiUtil.request('GET','api.veracode.com','/appsec/v1/applications', {'legacy_id':legacyAppId+''});
         application = response.data;
-        //console.log(response.data._embedded);
     } catch (error) {
         console.log(error.response);
-        //console.error(error);
     }
     console.info('end getApplicationByLegacyId');
     return application;
@@ -70,7 +67,6 @@ const getApplicationByName = async (appName) => {
             console.log(application);
         } catch (error) {
             console.log(error.response);
-            //console.error(error);
         }
     }
     console.info('getApplicationByName - END');

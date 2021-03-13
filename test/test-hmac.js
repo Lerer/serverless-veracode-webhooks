@@ -2,9 +2,7 @@ const buildInfoHandler = require('../util/apis/veracode/buildInfo');
 const appHandler = require('../util/apis/veracode/applications');
 const sandboxHandler = require('../util/apis/veracode/sandboxes');
 
-//const res = await appListHandler.getApplications();
 
-//console.log(res);
 
 // id: 747084
 // profile: 79888

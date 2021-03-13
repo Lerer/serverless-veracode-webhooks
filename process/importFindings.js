@@ -18,15 +18,12 @@ const handleEvent = async (customEvent) => {
 		console.log('Got more than one message!!!');
 	}
 	for (let record of records) {
-		//const eventAttrs = record.messageAttributes;
 		const recordBody = JSON.parse(record.body);
 		console.log(recordBody);
 		if (recordBody.github_event === 'check_run' && recordBody.check_run && recordBody.check_run.external_id) {
             const context = recordBody.check_run.external_id.split(':');
-            //console.log(`context: ${context}`);
             if (context.length===3) {
                 const findings = await findingsAPIHandler.getScanFindings(context[0],context[1],context[2]);
-                //console.log(JSON.stringify(findings));
                 if (findings._embedded && findings._embedded.findings) {
                     // process array for issue creation
                     const parsedFindingsArray = await processFindings(findings._embedded.findings);
@@ -89,7 +86,6 @@ const parseStaticScanIssue = (finding) => {
     details = `${details}  \n- Scanner: Veracode Static Application Security Testing`;
     
     const metadata = `\n\n<!-- lerer = {"${VID}":${finding.issue_id}} -->`;
-    //console.log(JSON.stringify(finding));
 
     console.log('parseStaticScanIssue - END');
     return {

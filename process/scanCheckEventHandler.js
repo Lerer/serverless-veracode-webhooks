@@ -5,10 +5,7 @@ const buildSummaryHandler = require('../util/apis/veracode/buildSummary');
 
 const checkRun = require('../util/apis/github/checkRun');
 
-// const importFindingProcessHandler = require('./importFindings');
-
 const AWS = require('aws-sdk');
-//const buildInfo = require('../util/apis/buildInfo');
 
 const AWS_ACCOUNT = process.env.ACCOUNT_ID;
 const AWS_REGION = process.env.TARGET_REGION;
@@ -30,7 +27,6 @@ const RECHECK_ACTION = {
 var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
 
 const SCAN_CHECK_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/ScanChecks`;
-//const GITHUB_REPORT_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/GithubReportBack`;
 
 /*
  handle ScanCheck event
@@ -51,14 +47,13 @@ const handleEvent = async (customEvent) => {
 		const recordBody = JSON.parse(record.body);
 		console.log(recordBody);
 		if (recordBody.github_event === 'check_run') {
-			//await importFindingProcessHandler.handleEvent(recordBody);
 			console.log(`Error - wrong place to handle this type of event`);
 			continue;
 		}
 		let response = {};
 		if (!eventAttrs.appLegacyID) {
 			const sandboxName = eventAttrs.sandboxName ? eventAttrs.sandboxName.stringValue : undefined;
-			//response = await getLagacyIDsFromGUID(eventAttrs.appGUID.stringValue,eventAttrs.sandboxGUID.stringValue || null); 
+
 			response = await getLagacyIDsFromName(eventAttrs.appName.stringValue,sandboxName);
 			console.log(response);
 			if (response.appLegacyID && response.appLegacyID.stringValue!=='0') {
@@ -93,7 +88,6 @@ const handleEvent = async (customEvent) => {
 					// }
 				);
 				console.log('New check run requested');
-				//console.log(newCheckRun);
 
 				if (newCheckRun) {
 					// Adding the check run id to the sqs attributes
@@ -120,7 +114,7 @@ const handleEvent = async (customEvent) => {
 			console.log('Starting to check for build info');
 			// we can start the check of the build status
 			const buildInfo = await getLatestBuildStatus(eventAttrs);
-			//const buildInfo = response;
+
 			let scanRecheckTime = RECHECK_ACTION.STOP;
 			if (buildInfo['$'] && buildInfo.analysis_unit ) {
 				scanRecheckTime = calculateRescanTimeFromAnalysisUnit(buildInfo.analysis_unit);
@@ -144,7 +138,7 @@ const handleEvent = async (customEvent) => {
 			};
 
 			if (scanRecheckTime === RECHECK_ACTION.STOP) {
-				//const checkRunID = eventAttrs.checkRunID.stringValue;
+
 				await checkRun.updateCheckRun(
 					recordBody.repository_owner_login,
 					recordBody.repository_name,
@@ -159,7 +153,7 @@ const handleEvent = async (customEvent) => {
 						}
 					});
 			} else if (scanRecheckTime === RECHECK_ACTION.FINISHED) {
-				//console.log(eventAttrs);
+
 				const appID = eventAttrs.appLegacyID.stringValue;
 				const orgID = eventAttrs.orgID.stringValue;
 				const appGUID = eventAttrs.appGUID.stringValue;
@@ -173,7 +167,7 @@ const handleEvent = async (customEvent) => {
 				// only update if needed
 				if (!recordBody.pre_calculated_updated || complianceStatus!==buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
 					const parsedSummary = await buildSummaryHandler.getParseBuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
-					//console.log(parsedSummary);
+
 					const conclusion = calculateConclusion(parsedSummary.summaryCompliance); 
 					console.log(`Current scan conclusion: '${conclusion}'`);
 					const checkRunFinished = await checkRun.updateCheckRun(
@@ -240,10 +234,10 @@ const handleEvent = async (customEvent) => {
 				if (currentStatus !== recordBody.previous_scan_status) {
 					// Sending update to the Static check
 					console.log(`Status changed from ${recordBody.previous_scan_status} to ${buildInfo.analysis_unit['$'].status} - sending update`)
-					//console.log(JSON.stringify(eventAttrs));
+
 					const reportingStatus = getGithubStatusFromBuildStatus(buildInfo);
 					const sandboxName = (eventAttrs.sandboxName && eventAttrs.sandboxName.stringValue) ? eventAttrs.sandboxName.stringValue : undefined;
-					const checkRunUpdate = await checkRun.updateCheckRun(
+					await checkRun.updateCheckRun(
 						recordBody.repository_owner_login,
 						recordBody.repository_name,
 						recordBody.check_run_id,
@@ -256,7 +250,7 @@ const handleEvent = async (customEvent) => {
 								text: `Veracode scan status update: ${buildInfo.analysis_unit['$'].status}`
 							}
 						});
-					//console.log(checkRunUpdate);
+
 					console.log('Github check run updated');
 				}
 				// any other rescan action
@@ -269,8 +263,6 @@ const handleEvent = async (customEvent) => {
 			// - and/or requeue response to the sender
 			//console.log('Finish process scan check');
 		}
-		//console.log(`Processing response: ${JSON.stringify(response)}`);
-		//console.log('Finish process event record')
 	}
 	console.log('handleEvent - END')
 }
@@ -295,43 +287,6 @@ const getStatusChangeSummary = (appName,sandboxName,buildID) => {
 	summaryHeading = `${summaryHeading}\n> Build ${buildID} submitted. Awaiting scan results...`;
     return summaryHeading;
 }
-
-// const getLagacyIDsFromGUID = async (appGUID,sandboxGUID) => {
-// 	const retVal = {
-// 		appLegacyID : {
-// 			dataType: "Number",
-// 			stringValue: '0'
-// 		}
-// 	}
-
-// 	let response = await appsHandler.getApplicationById(appGUID);
-// 	if (response.id) {
-// 		console.log(`adding app legacy id: ${response.id}`);
-// 		retVal.appLegacyID = {
-// 			dataType: "Number",
-// 			stringValue: response.id + ''
-// 		}
-// 	} else {
-// 		// No point to continue if app id is not found
-// 		console.log('no id parameter in the response for get application by id');
-// 		return retVal;
-// 	}
-
-// 	if (sandboxGUID && sandboxGUID!=null) {
-// 		// get the sandbox id
-// 		response = await sandboxHandler.getSandboxByGUID(appGUID,sandboxGUID);
-// 		if (response.id) {
-// 			console.log(`adding sandbox legacy id: ${response.id}`);
-// 			retVal.sandboxLegacyID = {
-// 				dataType: "Number",
-// 				stringValue: response.id + ''
-// 			}
-// 		} else {
-// 			console.log('no id parameter in the response for get sandbox by guid');
-// 		}
-// 	}
-// 	return retVal
-// }
 
 const getLagacyIDsFromName = async (appName,sandboxName) => {
 	const retVal = {
@@ -425,7 +380,6 @@ const replaceSQSMessageAttr = (msgAttr) => {
 }
 
 const calculateRescanTimeFromAnalysisUnit = (analysisUnit) => {
-	//console.log('calculateRescanTimeFromAnalysisUnit - START');
 	let scanRecheckTime = RECHECK_ACTION.STOP;
 	if (analysisUnit['$']) {
 		const scanStatus = analysisUnit['$'].status;
@@ -455,7 +409,6 @@ const calculateRescanTimeFromAnalysisUnit = (analysisUnit) => {
 	} else {
 		console.log(`no '$' element in analysisUnit`);
 	}
-	//console.log('calculateRescanTimeFromAnalysisUnit - END');
 	return scanRecheckTime;
 }
 

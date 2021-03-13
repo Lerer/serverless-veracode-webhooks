@@ -7,7 +7,6 @@ const PROTOCOL = 'https://';
 const DEFAULT_METHOD = 'GET';
 
 const request = (inputMethod,host,path, params) => {
-    //console.log('api query handler');
     let method = inputMethod || DEFAULT_METHOD; 
     // funky for the Veracode HMAC generation
     let queryString = '';
