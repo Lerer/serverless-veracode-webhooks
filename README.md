@@ -31,6 +31,8 @@ __Each iten in the list will rander an issue with the following details:__
   <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/issue-details.png?raw=true" width="600px" alt="Issue details"/>
 </p>
 
+> Note - the solution was limited to import up to 250 issues from veracode into Github
+
 ## The solution will act as out-of-band process 
   - You don't need to wait for the scan to finish in order to get the results in your PR
   - Build pipeline time is not impacted (besides upload time)
