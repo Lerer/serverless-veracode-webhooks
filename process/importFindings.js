@@ -6,6 +6,7 @@ const githubIssuesHandler = require('../util/apis/github/issues');
 
 const metadataRegex = /\n<!-- lerer = (.*) -->/
 const VID = 'vid';
+const githubPageSize = findingsAPIHandler.findingsPageSize+10;
 
 /*
  handle Import findings to and existing GitHub check run 
@@ -22,7 +23,6 @@ const handleEvent = async (customEvent) => {
 		if (recordBody.github_event === 'check_run' && recordBody.check_run && recordBody.check_run.external_id) {
             const context = recordBody.check_run.external_id.split(':');
             if (context.length===3) {
-                //const findings = await findingsAPIHandler.getScanFindings(context[0],context[1],context[2]);
                 let scanFindings = await getVeracodeFindings(context[0],context[1],context[2]);
                 if (scanFindings && scanFindings.length>0) {
                     // set repeated vars
@@ -36,7 +36,7 @@ const handleEvent = async (customEvent) => {
                         scanFindings = cleanExistingIssuesFromFindings(scanFindings,existingIssues);
                     }
                     // process array for issue creation
-                    const parsedFindingsArray = processFindings(scanFindings);
+                    const parsedFindingsArray = processFindings(scanFindings,owner,repo);
                     console.log(`parsed findings for creation: ${parsedFindingsArray.length}`);
                     // verify veracode labels
                     await verifyLabels(owner,repo);
@@ -58,18 +58,16 @@ const getVeracodeFindings = async (appGUID,sandboxGUID,buildID) => {
     let findings = [];
     let page = 0;
     while (page>-1 && page<5) {
-        const findingsReq = await findingsAPIHandler.getScanFindings(appGUID,sandboxGUID,buildID,page,2);
+        const findingsReq = await findingsAPIHandler.getScanFindings(appGUID,sandboxGUID,buildID,page);
         if (findingsReq && findingsReq._embedded && findingsReq._embedded.findings) {
             console.log(`returned ${findingsReq._embedded.findings.length} findings`)
             findings = findings.concat(findingsReq._embedded.findings);
-            console.log(findingsReq.page);
             if (findingsReq.page.number <findingsReq.page.total_pages-1) {
                 page++;
             } else {
                 page = -1;
             }
         } else {
-            console.log(findingsReq);
             page = -10;
         }
         console.log(`Total accumulated issues: ${findings.length}`);
@@ -78,14 +76,14 @@ const getVeracodeFindings = async (appGUID,sandboxGUID,buildID) => {
     return findings;
 }
 
-const processFindings = (findingsArray) => {
+const processFindings = (findingsArray,owner,repo) => {
     if (typeof findingsArray !== 'object') {
         console.log(`Error trying to process findings where input is ${typeof findingsArray}`)
     }
-    return findingsArray.map((finding) => parseStaticScanIssue(finding));
+    return findingsArray.map((finding) => parseStaticScanIssue(finding,owner,repo));
 }
 
-const parseStaticScanIssue = (finding) => {
+const parseStaticScanIssue = (finding,owner,repo) => {
     let details = '### Description:  \n';
     let references = '### Identifiers:  \n';
     const sentences = finding.description.split(/<\/span>\s*/);
@@ -111,7 +109,7 @@ const parseStaticScanIssue = (finding) => {
  
     details = `${details}  \n- Veracode issue ID: ${finding.issue_id}`;
     details = `${details}  \n- Severity: ${intSev2Name(finding.finding_details.severity)}`;
-    details = `${details}  \n- Location: ${finding.finding_details.file_path}:${finding.finding_details.file_line_number}`;
+    details = `${details}  \n- Location: [${finding.finding_details.file_path}:${finding.finding_details.file_line_number}](https://github.com/${owner}/${repo}/search?q=filename:${finding.finding_details.file_name})`;
     details = `${details}  \n- Issue found on build: ${finding.build_id}`;
     details = `${details}  \n- Issue first found at: ${new Date(finding.finding_status.first_found_date).toUTCString()}`;
     details = `${details}  \n- Scanner: Veracode Static Application Security Testing`;
@@ -176,7 +174,8 @@ const collectExistingOpenIssues  = async (owner,repo) => {
         const issues = await githubIssuesHandler.listRepoIssue(owner,repo,{
             state: 'open',
             labels: 'veracode',
-            page
+            page,
+            per_page:githubPageSize
         });
         if (issues) {
             const ids = issues.data.map((issue) => {
@@ -201,7 +200,7 @@ const collectExistingOpenIssues  = async (owner,repo) => {
     openIssues = openIssues.filter((item) => {
         return (item>0);
     })
-    console.log(`Existing Open issues: ${openIssues}`);
+    console.log(`Existing Filtered Open issues: ${openIssues.length}`);
     return openIssues;
 }
 

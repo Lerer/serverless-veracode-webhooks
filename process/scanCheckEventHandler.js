@@ -344,7 +344,7 @@ const getLatestBuildStatus = async (eventAttrs) => {
 	if (eventAttrs.sandboxLegacyID) {
 		sandboxId = eventAttrs.sandboxLegacyID.stringValue;
 	}
-	return await buildInfoHandler.getAppbuildInfo(appId,sandboxId);
+	return buildInfoHandler.getAppbuildInfo(appId,sandboxId);
 }
 
 const requeueMessage = async (msgAttrs,delay,msgBody,queueUrl) => {

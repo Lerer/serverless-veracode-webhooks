@@ -15,7 +15,23 @@ __Note__ - The solution supports __only__ GitHub workflow triggered by `push` an
   <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/push-check-output-sca.png?raw=true" width="600px" alt="Github Push check"/>
 </p>
 
-## The Savings
+### Import findings
+__A button was added as part of scan result report to request for issues to be created based on the scan findings which impact policy__
+<p align="center">
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/import-findings-button.png?raw=true" width="600px" alt="Import findings button"/>
+</p>
+
+__Post finding import the list of issues will get populated with the veracode issues:__
+<p align="center">
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/issues-list.png?raw=true" width="600px" alt="Issues list"/>
+</p>
+
+__Each iten in the list will rander an issue with the following details:__
+<p align="center">
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/issue-details.png?raw=true" width="600px" alt="Issue details"/>
+</p>
+
+## The solution will act as out-of-band process 
   - You don't need to wait for the scan to finish in order to get the results in your PR
   - Build pipeline time is not impacted (besides upload time)
 <p align="center">
@@ -147,7 +163,7 @@ We will do that by creating an Application in the GitHub account.
      * __Single space__ separated and __NOT__ newline separated! 
    * GITHUB_APP_NAME=[Application Name you noted at #5.2]
    * GITHUB_APP_ID=[Application ID gathered at #5.2]
-   * GITHUB_APP_INSTALL_ID=[Application installation ID gathered at #4.4]
+   * GITHUB_APP_INSTALL_ID=[Application installation ID gathered at #5.4]
 2. (Optional) If you logged in to the SERVERLESS dashboard (free), and would like to view and monitor API endpoint and functions invocation:
    * Login to your Serverless account 
    * Create an application. When asked for template, select `serverless framework`. 
@@ -155,7 +171,7 @@ We will do that by creating an Application in the GitHub account.
    * Modify your `serverless.yml` file in the solution directory and override the following:
      * app: [Your new `application name`]
      * org: [Your SERVERLESS account id as shown on your dashboard]
-3. If you choose to skip the previous step (#6.3), comment out (using # in front of the line) attributes `app` and `org` in your `serverless.yml`.
+3. If you choose to skip the previous step (#7.3), comment out (using # in front of the line) attributes `app` and `org` in your `serverless.yml`.
 4. Navigate to `package.json` file and update the deploy scripts with your own AWS deployment region 
     __Here:__
     ```JSON
@@ -180,7 +196,7 @@ To support further actions such as request to import findings, please update the
 
 ### 9. Configure your repositories pipeline to call the notifier
 The following steps will take you through the GitHub workflow configuration to call the deployed solution.
-> Important - this step will only work if you configure the workflow for a repository which is permitted access when you install the GitHub application __#4.4__
+> Important - this step will only work if you configure the workflow for a repository which is permitted access when you install the GitHub application __#5.4__
 
 Since the solution _act as_ asynchronic WebHook, we can send a full scan to the Veracode platform without waiting for it to complete.
 
