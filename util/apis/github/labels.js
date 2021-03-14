@@ -57,11 +57,14 @@ const getVeracodeLabel = async (owner,repo) => {
                 repo,
                 name:LABELS.veracode.name
         });
-  
-        console.log(JSON.stringify(veracodeLabel));
+        console.log('Veracode Labels already exist');
     } catch (e) {
-        console.log('=======================   ERROR   ===============================');
-        console.log(e);
+        if (e.status===404) {
+            console.log('Veracode Labels does not exist');
+        } else {
+            console.log('=======================   ERROR   ===============================');
+            console.log(e);
+        }
     }
     console.log('getVeracodeLabel - END');
     return veracodeLabel;

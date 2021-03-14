@@ -34,7 +34,6 @@ const getAuthApp = async () => {
         console.log('getAuthApp - END ==   ERROR   ===============================');
         console.log(e);
     }
-    return;
 }
 
 module.exports = {

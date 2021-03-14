@@ -30,7 +30,8 @@ const createIssue = async (owner,repo,issueDetails) => {
                 owner,
                 repo,
                 title: issueDetails.title,
-                body: issueDetails.description
+                body: issueDetails.description,
+                labels: issueDetails.labels
         });
   
     } catch (e) {
