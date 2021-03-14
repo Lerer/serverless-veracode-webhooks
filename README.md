@@ -18,7 +18,7 @@ __Note__ - The solution supports __only__ GitHub workflow triggered by `push` an
 ### Import findings
 __A button was added as part of scan result report to request for issues to be created based on the scan findings which impact policy__
 <p align="center">
-  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/import-findings-button.png?raw=true" width="600px" alt="Import findings button"/>
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/import-findings-button.png?raw=true" width="350px" alt="Import findings button"/>
 </p>
 
 __Post finding import the list of issues will get populated with the veracode issues:__
@@ -28,7 +28,7 @@ __Post finding import the list of issues will get populated with the veracode is
 
 __Each iten in the list will rander an issue with the following details:__
 <p align="center">
-  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/issue-details.png?raw=true" width="600px" alt="Issue details"/>
+  <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/issue-details.png?raw=true" width="800px" alt="Issue details"/>
 </p>
 
 > Note - the solution was limited to import up to 250 issues from veracode into Github
