@@ -85,7 +85,7 @@ functions:
   veracodePopulateGithubIssues:
     handler: awsHandlers/populateGithubIssues.handler
     memorySize: 128
-    timeout: 10
+    timeout: 30
     environment:
       API_ID: ${env:API_ID}
       API_KEY: ${env:API_KEY}

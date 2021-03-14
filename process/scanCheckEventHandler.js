@@ -135,7 +135,7 @@ const handleEvent = async (customEvent) => {
 						}
 					);
 				}
-			};
+			}
 
 			if (scanRecheckTime === RECHECK_ACTION.STOP) {
 
@@ -344,11 +344,7 @@ const getLatestBuildStatus = async (eventAttrs) => {
 	if (eventAttrs.sandboxLegacyID) {
 		sandboxId = eventAttrs.sandboxLegacyID.stringValue;
 	}
-	const buildInfo = await buildInfoHandler.getAppbuildInfo(appId,sandboxId);
-	// log the build info
-	//console.log(buildInfo);
-
-	return buildInfo;
+	return buildInfoHandler.getAppbuildInfo(appId,sandboxId);
 }
 
 const requeueMessage = async (msgAttrs,delay,msgBody,queueUrl) => {
@@ -386,7 +382,6 @@ const calculateRescanTimeFromAnalysisUnit = (analysisUnit) => {
 		console.log(`calculateRescanTimeFromAnalysisUnit - Last scan status: '${scanStatus}'`);
 		switch (scanStatus) {
 			case buildInfoHandler.STATUS.RESULT_READY:
-				// TODO - report scan done
 				scanRecheckTime = RECHECK_ACTION.FINISHED;
 				break;
 			case buildInfoHandler.STATUS.INCOMPLETE:
@@ -420,7 +415,6 @@ const getGithubStatusFromBuildStatus = (buildInfo) => {
 		const buildStatus = buildInfo.analysis_unit['$'].status;
 		switch (buildStatus) {
 			case buildInfoHandler.STATUS.RESULT_READY:
-				// TODO - report scan done
 				status.conclusion = 'neutral';
 				break;
 			case buildInfoHandler.STATUS.INCOMPLETE:

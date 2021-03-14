@@ -1,6 +1,8 @@
 const apiUtil = require('../../helper/apiQueryHandler');
 
-const getScanFindings = async (applicationGUID,sandboxGUID,buildId) => {
+const findingsPageSize = 50;
+
+const getScanFindings = async (applicationGUID,sandboxGUID,buildId,page=1,pageSize=findingsPageSize) => {
     console.log('getScanFindings - START');
     let jsonBuildSummary = {};
     
@@ -8,8 +10,9 @@ const getScanFindings = async (applicationGUID,sandboxGUID,buildId) => {
         
         const requestParameters = {
             violates_policy:true,
-            size:1,
-            scantype:'STATIC'
+            size:pageSize,
+            scantype:'STATIC',
+            page
         };
 
         if (sandboxGUID) {
@@ -35,5 +38,6 @@ const getScanFindings = async (applicationGUID,sandboxGUID,buildId) => {
 }
 
 module.exports = {
-  getScanFindings
+  getScanFindings,
+  findingsPageSize
 };

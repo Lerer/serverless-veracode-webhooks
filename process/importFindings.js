@@ -6,10 +6,10 @@ const githubIssuesHandler = require('../util/apis/github/issues');
 
 const metadataRegex = /\n<!-- lerer = (.*) -->/
 const VID = 'vid';
+const githubPageSize = findingsAPIHandler.findingsPageSize+10;
+
 /*
- handle Import findings to and existing GitHub check run
- 
- 
+ handle Import findings to and existing GitHub check run 
 */
 const handleEvent = async (customEvent) => {
     console.log('Import Findings Event Handler - START');
@@ -23,18 +23,25 @@ const handleEvent = async (customEvent) => {
 		if (recordBody.github_event === 'check_run' && recordBody.check_run && recordBody.check_run.external_id) {
             const context = recordBody.check_run.external_id.split(':');
             if (context.length===3) {
-                const findings = await findingsAPIHandler.getScanFindings(context[0],context[1],context[2]);
-                if (findings._embedded && findings._embedded.findings) {
-                    // process array for issue creation
-                    const parsedFindingsArray = await processFindings(findings._embedded.findings);
-                    // verify veracode labels
+                let scanFindings = await getVeracodeFindings(context[0],context[1],context[2]);
+                if (scanFindings && scanFindings.length>0) {
+                    // set repeated vars
                     const owner = recordBody.repository.owner.login;
                     const repo = recordBody.repository.name;
-                    await verifyLabels(owner,repo);
+                    //let scanFindings = findings._embedded.findings;
                     // gather existing open issues - to prevent duplication
                     const existingIssues = await collectExistingOpenIssues(owner,repo);
+                    // If issues already exists, remove them from the findings
+                    if (existingIssues.length>0) {
+                        scanFindings = cleanExistingIssuesFromFindings(scanFindings,existingIssues);
+                    }
+                    // process array for issue creation
+                    const parsedFindingsArray = processFindings(scanFindings,owner,repo);
+                    console.log(`parsed findings for creation: ${parsedFindingsArray.length}`);
+                    // verify veracode labels
+                    await verifyLabels(owner,repo);
                     // create the issues themselves
-                    await createGithubIssues(owner,repo,parsedFindingsArray,existingIssues);
+                    await createGithubIssues(owner,repo,parsedFindingsArray);
                 }
             } else {
                 console.log(`wrong context value: ${recordBody.check_run.external_id}`);
@@ -46,15 +53,37 @@ const handleEvent = async (customEvent) => {
     console.log('Import Findings Event Handler - END');
 }
 
-const processFindings = async (findingsArray) => {
+const getVeracodeFindings = async (appGUID,sandboxGUID,buildID) => {
+    console.log('getVeracodeFindings - START');
+    let findings = [];
+    let page = 0;
+    while (page>-1 && page<5) {
+        const findingsReq = await findingsAPIHandler.getScanFindings(appGUID,sandboxGUID,buildID,page);
+        if (findingsReq && findingsReq._embedded && findingsReq._embedded.findings) {
+            console.log(`returned ${findingsReq._embedded.findings.length} findings`)
+            findings = findings.concat(findingsReq._embedded.findings);
+            if (findingsReq.page.number <findingsReq.page.total_pages-1) {
+                page++;
+            } else {
+                page = -1;
+            }
+        } else {
+            page = -10;
+        }
+        console.log(`Total accumulated issues: ${findings.length}`);
+    }
+    console.log('getVeracodeFindings - END');
+    return findings;
+}
+
+const processFindings = (findingsArray,owner,repo) => {
     if (typeof findingsArray !== 'object') {
         console.log(`Error trying to process findings where input is ${typeof findingsArray}`)
     }
-    return await findingsArray.map((finding) => parseStaticScanIssue(finding));
+    return findingsArray.map((finding) => parseStaticScanIssue(finding,owner,repo));
 }
 
-const parseStaticScanIssue = (finding) => {
-    console.log('parseStaticScanIssue - START');
+const parseStaticScanIssue = (finding,owner,repo) => {
     let details = '### Description:  \n';
     let references = '### Identifiers:  \n';
     const sentences = finding.description.split(/<\/span>\s*/);
@@ -69,7 +98,7 @@ const parseStaticScanIssue = (finding) => {
                 const link = ref.match(/http.*\">/);
                 const text = ref.match(/">.*/);
                 if (link && text)  {
-                    references = `${references}- [${text[0].substring(2)}](${link[0].substring(0,link[0].length-2)}){:target="_blank"}  \n`;
+                    references = `${references}- [${text[0].substring(2)}](${link[0].substring(0,link[0].length-2)})   \n`;
                 }
             })
 
@@ -80,18 +109,18 @@ const parseStaticScanIssue = (finding) => {
  
     details = `${details}  \n- Veracode issue ID: ${finding.issue_id}`;
     details = `${details}  \n- Severity: ${intSev2Name(finding.finding_details.severity)}`;
-    details = `${details}  \n- Location: ${finding.finding_details.file_path}:${finding.finding_details.file_line_number}`;
+    details = `${details}  \n- Location: [${finding.finding_details.file_path}:${finding.finding_details.file_line_number}](https://github.com/${owner}/${repo}/search?q=filename:${finding.finding_details.file_name})`;
     details = `${details}  \n- Issue found on build: ${finding.build_id}`;
     details = `${details}  \n- Issue first found at: ${new Date(finding.finding_status.first_found_date).toUTCString()}`;
     details = `${details}  \n- Scanner: Veracode Static Application Security Testing`;
     
     const metadata = `\n\n<!-- lerer = {"${VID}":${finding.issue_id}} -->`;
 
-    console.log('parseStaticScanIssue - END');
     return {
         title: finding.finding_details.cwe.name,
         description: `${details}  \n  \n${references}${metadata}`,
-        id: finding.issue_id
+        id: finding.issue_id,
+        labels: getLabels4SevInt(finding.finding_details.severity)
     }; 
 }
 
@@ -120,6 +149,16 @@ const intSev2Name = (sevInt) => {
     return sev;
 }
 
+const getLabels4SevInt = (sevInt) => {
+    if (Number.isNaN(sevInt) || sevInt>5 || sevInt<0) {
+        console.error(`Wrong severity: ${sevInt}`);
+        return [githubLabelsHandler.LABELS.veracode.name];
+    }
+    const sevStruct = githubLabelsHandler.LABELS.severities.filter((sevObj) => sevObj.severity===sevInt);
+
+    return [githubLabelsHandler.LABELS.veracode.name,sevStruct[0].name];
+}
+
 const verifyLabels = async (owner,repo) => {
     const baseLabel = await githubLabelsHandler.getVeracodeLabel(owner,repo);
     
@@ -135,7 +174,8 @@ const collectExistingOpenIssues  = async (owner,repo) => {
         const issues = await githubIssuesHandler.listRepoIssue(owner,repo,{
             state: 'open',
             labels: 'veracode',
-            page
+            page,
+            per_page:githubPageSize
         });
         if (issues) {
             const ids = issues.data.map((issue) => {
@@ -145,7 +185,6 @@ const collectExistingOpenIssues  = async (owner,repo) => {
                 if (match) {
                     const data = JSON.parse(match[1])
                     id = data[VID];
-                    console.log(id);
                 }
                 return id;
             });
@@ -158,25 +197,27 @@ const collectExistingOpenIssues  = async (owner,repo) => {
             page = -1;
         }
     }
-
-    console.log(openIssues);
+    openIssues = openIssues.filter((item) => {
+        return (item>0);
+    })
+    console.log(`Existing Filtered Open issues: ${openIssues.length}`);
     return openIssues;
 }
 
-const createGithubIssues = async (owner,repo,parsedIssuesArray,existingIssues) => {
+const cleanExistingIssuesFromFindings = (scanFindings,existingIssues) => {
+    return scanFindings.filter((finding) => {
+        return !existingIssues.includes(parseInt(finding.issue_id));
+    });
+}
 
-    
-
-    // for (let issueDetails of parsedIssuesArray) {
-    //     console.log(issueDetails);
-    //     console.log(JSON.stringify(issueDetails));
-    //     await githubIssuesHandler.createIssue(owner,repo,issueDetails);
-    // }
-    //await githubIssuesHandler.searchRepoIssue(encodeURIComponent(`is:issue repo:${owner}/${repo} state:open`);
-    // await githubIssuesHandler.listRepoIssue(owner,repo,{
-    //     state: 'open',
-    //     labels: 'veracode'
-    // });
+const createGithubIssues = async (owner,repo,parsedIssuesArray) => {
+    console.log('createGithubIssues - START');
+    console.log(`creating ${parsedIssuesArray.length} issues`);
+    for (let issueDetails of parsedIssuesArray) {
+        console.log(JSON.stringify(issueDetails));  
+        await githubIssuesHandler.createIssue(owner,repo,issueDetails);
+    }
+    console.log('createGithubIssues - END');
 }
 
 
