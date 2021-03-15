@@ -41,7 +41,7 @@ __Each iten in the list will rander an issue with the following details:__
 </p>
 
 ## The implementation
-The repository contains an implementation of SERVERLESS framework which can deploy a set of (24) resources in a chosen AWS region.
+The repository contains an implementation of SERVERLESS framework which can deploy a set of (30) resources in a chosen AWS region.
 resources:  
 
 ### endpoints: 
