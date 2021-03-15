@@ -103,7 +103,11 @@ resources:
       Type: "AWS::SQS::Queue"
       Properties:
         QueueName: "ScanChecks"
+        VisibilityTimeout: 120
+        MessageRetentionPeriod: 43200
     ImportFindings:
       Type: "AWS::SQS::Queue"
       Properties:
         QueueName: "ImportFindings"
+        VisibilityTimeout: 45
+        MessageRetentionPeriod: 7200
