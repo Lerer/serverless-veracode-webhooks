@@ -21,7 +21,7 @@ __A button was added as part of scan result report to request for issues to be c
   <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/import-findings-button.png?raw=true" width="350px" alt="Import findings button"/>
 </p>
 
-__Post finding import the list of issues will get populated with the veracode issues:__
+__After the request is sent for import findings (by a click of a button), the list of issues will get populated with the veracode issues:__
 <p align="center">
   <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/issues-list.png?raw=true" width="600px" alt="Issues list"/>
 </p>
