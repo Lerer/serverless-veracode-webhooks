@@ -96,8 +96,9 @@ In order to provided the minimun policy required for the deployment of the solut
    1. Paste the `policy.json` file content into the JSON area of the policy. (Don't use the Visual editor).
    2. Save the policy
 
-__Additional resources:__
-Serverless framework (this project), need a role in AWS which will allow it to deploy its resources. An easy example can be found here:
+<details><summary><b>References</b></summary><p>
+Serverless framework (used in the solution) need a role in AWS which will allow it to deploy its resources. An easy example can be found here:
+
 - [Customizing your IAM Policy](https://seed.run/docs/customizing-your-iam-policy.html)
 
 Example with explanaition how to deploy custom AWS IAM role:
@@ -107,6 +108,7 @@ Online Policy Generator
 - [Serverless Permission Policy Generato](https://open-sl.github.io/serverless-permission-generator/)
 > Note - the above generator may miss or generate over permissive policy
 
+</p></details>
       
 ### 4. Configure Serverless to deploy to your AWS account
 
