@@ -1,10 +1,10 @@
 # Veracode Serverless Webhooks - For GitHub workflows
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com) [![Maintained by Yaakov Lerer](https://img.shields.io/badge/maintained%20by-Lerer-brightgreen)](http://www.github.com/lerer) [![GitHub issues](https://img.shields.io/github/issues/lerer/serverless-veracode-webhooks/enhancement?color=9cf)](https://github.com/Lerer/serverless-veracode-webhooks/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement) [![GitHub issues](https://img.shields.io/github/issues/lerer/serverless-veracode-webhooks/bug?color=red)](https://github.com/Lerer/serverless-veracode-webhooks/issues?q=is%3Aopen+is%3Aissue+label%3Abug) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Lerer_serverless-veracode-webhooks&metric=alert_status)](https://sonarcloud.io/dashboard?id=Lerer_serverless-veracode-webhooks)
 
-## Purpose
-The purpose of the repository is to enable customers who want to use the full veracode Static scan (not the Pipeline or the IDE scans) and get updates back in an asynchronious method.
+## Purpose 
+The purpose of the repository is to enable Veracode customers who want to use the Veracode Upload-and-Scan Static and SCA (not the Pipeline or the IDE scans) and get updates back in an asynchronous method.
 
-__Note__ - The solution supports __only__ GitHub workflow triggered by `push` and `pull_request`.
+__Note__ - The solution is a pre-built Serverless Github Application deployment and supports __only__ GitHub workflow triggered by `push` and `pull_request`.
 
 ## Output Example:
 <p align="center">
@@ -21,7 +21,7 @@ __A button was added as part of scan result report to request for issues to be c
   <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/import-findings-button.png?raw=true" width="350px" alt="Import findings button"/>
 </p>
 
-__Post finding import the list of issues will get populated with the veracode issues:__
+__After the request is sent for import findings (by a click of a button), the list of issues will get populated with the veracode issues:__
 <p align="center">
   <img src="https://github.com/lerer/serverless-veracode-webhooks/blob/master/resources/issues-list.png?raw=true" width="600px" alt="Issues list"/>
 </p>
@@ -41,7 +41,7 @@ __Each iten in the list will rander an issue with the following details:__
 </p>
 
 ## The implementation
-The repository contains an implementation of SERVERLESS framework which can deploy a set of (24) resources in a chosen AWS region.
+The repository contains an implementation of SERVERLESS framework which can deploy a set of (30) resources in a chosen AWS region.
 resources:  
 
 ### endpoints: 
@@ -96,8 +96,9 @@ In order to provided the minimun policy required for the deployment of the solut
    1. Paste the `policy.json` file content into the JSON area of the policy. (Don't use the Visual editor).
    2. Save the policy
 
-__Additional resources:__
-Serverless framework (this project), need a role in AWS which will allow it to deploy its resources. An easy example can be found here:
+<details><summary><b>References</b></summary><p>
+Serverless framework (used in the solution) need a role in AWS which will allow it to deploy its resources. An easy example can be found here:
+
 - [Customizing your IAM Policy](https://seed.run/docs/customizing-your-iam-policy.html)
 
 Example with explanaition how to deploy custom AWS IAM role:
@@ -107,6 +108,7 @@ Online Policy Generator
 - [Serverless Permission Policy Generato](https://open-sl.github.io/serverless-permission-generator/)
 > Note - the above generator may miss or generate over permissive policy
 
+</p></details>
       
 ### 4. Configure Serverless to deploy to your AWS account
 
