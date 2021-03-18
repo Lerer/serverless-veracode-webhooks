@@ -160,9 +160,9 @@
           "iam:DeleteRole"
         ],
         "Resource": [
-          "arn:aws:iam::<Account_ID>:role/<Service>-<Stage>-IamRoleCustomResourcesLamb-*",
+          "arn:aws:iam::<Account_ID>:role/<Service>-<Stage>-IamRoleCustomResourcesLam*",
           "arn:aws:iam::<Account_ID>:role/<Service>-<Stage>-<AWSRegion>-lambdaRole",
-          "arn:aws:iam::<Account_ID>:role/<Service>-<Stage>-EnterpriseLogAccessIamRole-*"
+          "arn:aws:iam::<Account_ID>:role/<Service>-<Stage>-EnterpriseLogAccessIamRol*"
         ]
       },
       {
