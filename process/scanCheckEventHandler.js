@@ -50,221 +50,224 @@ const handleEvent = async (customEvent) => {
 			console.log(`Error - wrong place to handle this type of event`);
 			continue;
 		}
-		let response = {};
+
 		if (!eventAttrs.appLegacyID) {
-			const sandboxName = eventAttrs.sandboxName ? eventAttrs.sandboxName.stringValue : undefined;
-
-			response = await getLagacyIDsFromName(eventAttrs.appName.stringValue,sandboxName);
-			console.log(response);
-			if (response.appLegacyID && response.appLegacyID.stringValue!=='0') {
-				eventAttrs.appLegacyID = response.appLegacyID;
-				eventAttrs.appGUID = response.appGUID;
-				eventAttrs.orgID = response.orgID;
-			} else {
-				console.log('Error - could not find application id');
-				return;
-			}
-			if (response.sandboxLegacyID) {
-				eventAttrs.sandboxLegacyID = response.sandboxLegacyID;
-				eventAttrs.sandboxGUID = response.sandboxGUID;
-			}
-
-			// report and create a new check-run
-			let sqsBaseMessage;
-			if (recordBody.github_event === 'push') { 
-				sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(recordBody);
-			} else if (recordBody.github_event === 'pull_request') {
-				sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(recordBody);
-				sqsBaseMessage.commit_sha = recordBody.pull_request.head.sha;
-			}
-
-			if (sqsBaseMessage && sqsBaseMessage !== null) {
-				const newCheckRun = await checkRun.createCheckRun(
-					sqsBaseMessage.repository_owner_login,
-					sqsBaseMessage.repository_name,
-					sqsBaseMessage.commit_sha
-					// ,{
-					// 	external_id: `${eventAttrs.appGUID}:${eventAttrs.sandboxGUID?eventAttrs.sandboxGUID:'policy'}:unknown`
-					// }
-				);
-				console.log('New check run requested');
-
-				if (newCheckRun) {
-					// Adding the check run id to the sqs attributes
-					eventAttrs.checkRunID = {
-						dataType: "Number",
-						stringValue: newCheckRun.data.id + ''
-					}
-					// requeue with lagacy ID
-					console.log(eventAttrs);
-
-					// re-queue with the lagacy ids;
-					await requeueMessage(eventAttrs,RECHECK_ACTION.SCANNING,JSON.stringify({/*...newCheckRun,*/...sqsBaseMessage,check_run_id:newCheckRun.data.id}),SCAN_CHECK_QUEUE_URL);
-					
-					console.log('Finish updating with lagacy ids and requeue for scan check');
-				} else {
-					console.error('Could not create check-run within GitHub - Abort further processing');
-					console.log(sqsBaseMessage);
-				}
-			} else {
-				console.log(`Un supported github event type: ${recordBody.github_event}`);
-			}
-
+			// need to collect information from the veracode platform before processing
+			await firstIterationHandling(recordBody,eventAttrs);
 		} else {
-			console.log('Starting to check for build info');
-			// we can start the check of the build status
-			const buildInfo = await getLatestBuildStatus(eventAttrs);
-
-			let scanRecheckTime = RECHECK_ACTION.STOP;
-			if (buildInfo['$'] && buildInfo.analysis_unit ) {
-				scanRecheckTime = calculateRescanTimeFromAnalysisUnit(buildInfo.analysis_unit);
-				// update with build id if not exist
-				if (!eventAttrs.buildID) {
-					eventAttrs.buildID = {
-						dataType: "String",
-						stringValue: buildInfo['$'].build_id
-					}
-					// update the external ID
-					//const checkRunID = eventAttrs.checkRunID.stringValue;
-					await checkRun.updateCheckRun(
-						recordBody.repository_owner_login,
-						recordBody.repository_name,
-						recordBody.check_run_id
-						,{
-							external_id: `${eventAttrs.appGUID.stringValue}:${eventAttrs.sandboxGUID?eventAttrs.sandboxGUID.stringValue:'policy'}:${eventAttrs.buildID.stringValue}`
-						}
-					);
-				}
-			}
-
-			if (scanRecheckTime === RECHECK_ACTION.STOP) {
-
-				await checkRun.updateCheckRun(
-					recordBody.repository_owner_login,
-					recordBody.repository_name,
-					recordBody.check_run_id,
-					{
-						status: 'completed',
-						conclusion: checkRun.CONCLUSION.SKIPPED,
-						output: {
-							summary: 'Issue with calculating recheck time. Bailing out!',
-							title: checkRunHandler.CHECK_RESULT_TITLE,
-						//	text: parsedSummary.textMD
-						}
-					});
-			} else if (scanRecheckTime === RECHECK_ACTION.FINISHED) {
-
-				const appID = eventAttrs.appLegacyID.stringValue;
-				const orgID = eventAttrs.orgID.stringValue;
-				const appGUID = eventAttrs.appGUID.stringValue;
-				const sandboxGUID = eventAttrs.sandboxGUID ? eventAttrs.sandboxGUID.stringValue : undefined;
-				// TODO - notify finished scan by updating the status
-				console.log('===  record body start on finish ===')
-				console.log(recordBody);
-				console.log('===  record body finish on finish ===')
-				// review compliance status
-				const complianceStatus = buildInfo['$'].policy_compliance_status;
-				// only update if needed
-				if (!recordBody.pre_calculated_updated || complianceStatus!==buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
-					const parsedSummary = await buildSummaryHandler.getParseBuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
-
-					const conclusion = calculateConclusion(parsedSummary.summaryCompliance); 
-					console.log(`Current scan conclusion: '${conclusion}'`);
-					const checkRunFinished = await checkRun.updateCheckRun(
-						recordBody.repository_owner_login,
-						recordBody.repository_name,
-						recordBody.check_run_id,
-						{	
-							status: 'completed',
-							conclusion,
-							output: {
-								summary: parsedSummary.summaryMD,
-								title: checkRun.CHECK_RESULT_TITLE,
-								text: parsedSummary.textMD
-							}
-						});
-					console.log('Check run => updated with a complete status');
-					console.log(checkRunFinished);
-				}
-				// if policy is not calculated, requeue again
-				if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
-					await requeueMessage(
-						eventAttrs,
-						RECHECK_ACTION.AWAITING_POLICY_CALCULATION,
-						JSON.stringify({...recordBody,previous_scan_status:buildInfoHandler.STATUS.RESULT_READY,pre_calculated_updated: true}),
-						SCAN_CHECK_QUEUE_URL);
-					console.log('Scan check finish - Re-queue for recheck as policy is being calculated');
-				} else {
-					// Add import issues action
-					await checkRun.updateCheckRun(
-						recordBody.repository_owner_login,
-						recordBody.repository_name,
-						recordBody.check_run_id,
-						{
-							actions: [
-								{
-									label: 'Import Findings',
-									description: 'Import findings as repositories issues',
-									identifier: 'import_findings'
-								}
-							]
-						}
-					);
-					console.log('Scan check finish - no recheck is required');
-				}
-
-			} else if (scanRecheckTime === RECHECK_ACTION.ERROR) {
-				console.log(`Error canculating recheck time - check the scan status message`);
-				const checkRunFailed = await checkRun.updateCheckRun(
-					recordBody.repository_owner_login,
-					recordBody.repository_name,
-					recordBody.check_run_id,
-					{	
-						status: 'completed',
-						conclusion: checkRun.CONCLUSION.FAILURE,
-						output: {
-							summary: `Unknow scan status: ${buildInfo.analysis_unit['$'].status}`,
-							title: checkRun.CHECK_RESULT_TITLE
-						}
-					});
-				console.log(checkRunFailed);
-			} else if (scanRecheckTime > 0) {
-				// Update if status changed
-				const currentStatus = buildInfo.analysis_unit['$'].status;
-				if (currentStatus !== recordBody.previous_scan_status) {
-					// Sending update to the Static check
-					console.log(`Status changed from ${recordBody.previous_scan_status} to ${buildInfo.analysis_unit['$'].status} - sending update`)
-
-					const reportingStatus = getGithubStatusFromBuildStatus(buildInfo);
-					const sandboxName = (eventAttrs.sandboxName && eventAttrs.sandboxName.stringValue) ? eventAttrs.sandboxName.stringValue : undefined;
-					await checkRun.updateCheckRun(
-						recordBody.repository_owner_login,
-						recordBody.repository_name,
-						recordBody.check_run_id,
-						{	
-							status: reportingStatus.status,
-							conclusion: reportingStatus.conclusion,
-							output: {
-								title: checkRun.CHECK_RESULT_TITLE,
-								summary: getStatusChangeSummary(eventAttrs.appName.stringValue,sandboxName, eventAttrs.buildID.stringValue),//`Build ${eventAttrs.buildID.stringValue} submitted. Awaiting scan results.`,
-								text: `Veracode scan status update: ${buildInfo.analysis_unit['$'].status}`
-							}
-						});
-
-					console.log('Github check run updated');
-				}
-				// any other rescan action
-				console.log(`requeuing message for another check in ${scanRecheckTime} seconds`);
-				// requeue same message with an update on the current status as the latest status
-				await requeueMessage(eventAttrs,scanRecheckTime,JSON.stringify({...recordBody,previous_scan_status:currentStatus}),SCAN_CHECK_QUEUE_URL);
-			}
-			// TODO - depend on status - 
-			// - requeue the same message, 
-			// - and/or requeue response to the sender
-			//console.log('Finish process scan check');
+			// process the record
+			await ongoingIterationHandling(recordBody,eventAttrs);
 		}
 	}
 	console.log('handleEvent - END')
+}
+
+const ongoingIterationHandling = async (recordBody,eventAttrs) => {
+	console.log('Starting to check for build info');
+	// we can start the check of the build status
+	const buildInfo = await getLatestBuildStatus(eventAttrs);
+
+	let scanRecheckTime = RECHECK_ACTION.STOP;
+	if (buildInfo['$'] && buildInfo.analysis_unit ) {
+		scanRecheckTime = calculateRescanTimeFromAnalysisUnit(buildInfo.analysis_unit);
+		// update with build id if not exist
+		if (!eventAttrs.buildID) {
+			eventAttrs.buildID = {
+				dataType: "String",
+				stringValue: buildInfo['$'].build_id
+			}
+			// update the external ID
+			//const checkRunID = eventAttrs.checkRunID.stringValue;
+			await checkRun.updateCheckRun(
+				recordBody.repository_owner_login,
+				recordBody.repository_name,
+				recordBody.check_run_id
+				,{
+					external_id: `${eventAttrs.appGUID.stringValue}:${eventAttrs.sandboxGUID?eventAttrs.sandboxGUID.stringValue:'policy'}:${eventAttrs.buildID.stringValue}`
+				}
+			);
+		}
+	}
+
+	if (scanRecheckTime === RECHECK_ACTION.STOP) {
+
+		await checkRun.updateCheckRun(
+			recordBody.repository_owner_login,
+			recordBody.repository_name,
+			recordBody.check_run_id,
+			{
+				status: 'completed',
+				conclusion: checkRun.CONCLUSION.SKIPPED,
+				output: {
+					summary: 'Issue with calculating recheck time. Bailing out!',
+					title: checkRunHandler.CHECK_RESULT_TITLE,
+				//	text: parsedSummary.textMD
+				}
+			});
+	} else if (scanRecheckTime === RECHECK_ACTION.FINISHED) {
+
+		const appID = eventAttrs.appLegacyID.stringValue;
+		const orgID = eventAttrs.orgID.stringValue;
+		const appGUID = eventAttrs.appGUID.stringValue;
+		const sandboxGUID = eventAttrs.sandboxGUID ? eventAttrs.sandboxGUID.stringValue : undefined;
+
+		console.log('===  record body start on finish ===')
+		console.log(recordBody);
+		console.log('===  record body finish on finish ===')
+		// review compliance status
+		const complianceStatus = buildInfo['$'].policy_compliance_status;
+		// only update if needed
+		if (!recordBody.pre_calculated_updated || complianceStatus!==buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
+			const parsedSummary = await buildSummaryHandler.getParseBuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
+
+			const conclusion = calculateConclusion(parsedSummary.summaryCompliance); 
+			console.log(`Current scan conclusion: '${conclusion}'`);
+			const checkRunFinished = await checkRun.updateCheckRun(
+				recordBody.repository_owner_login,
+				recordBody.repository_name,
+				recordBody.check_run_id,
+				{	
+					status: 'completed',
+					conclusion,
+					output: {
+						summary: parsedSummary.summaryMD,
+						title: checkRun.CHECK_RESULT_TITLE,
+						text: parsedSummary.textMD
+					}
+				});
+			console.log('Check run => updated with a complete status');
+			console.log(checkRunFinished);
+		}
+		// if policy is not calculated, requeue again
+		if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
+			await requeueMessage(
+				eventAttrs,
+				RECHECK_ACTION.AWAITING_POLICY_CALCULATION,
+				JSON.stringify({...recordBody,previous_scan_status:buildInfoHandler.STATUS.RESULT_READY,pre_calculated_updated: true}),
+				SCAN_CHECK_QUEUE_URL);
+			console.log('Scan check finish - Re-queue for recheck as policy is being calculated');
+		} else {
+			// Add import issues action
+			await checkRun.updateCheckRun(
+				recordBody.repository_owner_login,
+				recordBody.repository_name,
+				recordBody.check_run_id,
+				{
+					actions: [
+						{
+							label: 'Import Findings',
+							description: 'Import findings as repositories issues',
+							identifier: 'import_findings'
+						}
+					]
+				}
+			);
+			console.log('Scan check finish - no recheck is required');
+		}
+
+	} else if (scanRecheckTime === RECHECK_ACTION.ERROR) {
+		console.log(`Error canculating recheck time - check the scan status message`);
+		const checkRunFailed = await checkRun.updateCheckRun(
+			recordBody.repository_owner_login,
+			recordBody.repository_name,
+			recordBody.check_run_id,
+			{	
+				status: 'completed',
+				conclusion: checkRun.CONCLUSION.FAILURE,
+				output: {
+					summary: `Unknow scan status: ${buildInfo.analysis_unit['$'].status}`,
+					title: checkRun.CHECK_RESULT_TITLE
+				}
+			});
+		console.log(checkRunFailed);
+	} else if (scanRecheckTime > 0) {
+		// Update if status changed
+		const currentStatus = buildInfo.analysis_unit['$'].status;
+		if (currentStatus !== recordBody.previous_scan_status) {
+			// Sending update to the Static check
+			console.log(`Status changed from ${recordBody.previous_scan_status} to ${buildInfo.analysis_unit['$'].status} - sending update`)
+
+			const reportingStatus = getGithubStatusFromBuildStatus(buildInfo);
+			const sandboxName = (eventAttrs.sandboxName && eventAttrs.sandboxName.stringValue) ? eventAttrs.sandboxName.stringValue : undefined;
+			await checkRun.updateCheckRun(
+				recordBody.repository_owner_login,
+				recordBody.repository_name,
+				recordBody.check_run_id,
+				{	
+					status: reportingStatus.status,
+					conclusion: reportingStatus.conclusion,
+					output: {
+						title: checkRun.CHECK_RESULT_TITLE,
+						summary: getStatusChangeSummary(eventAttrs.appName.stringValue,sandboxName, eventAttrs.buildID.stringValue),//`Build ${eventAttrs.buildID.stringValue} submitted. Awaiting scan results.`,
+						text: `Veracode scan status update: ${buildInfo.analysis_unit['$'].status}`
+					}
+				});
+
+			console.log('Github check run updated');
+		}
+		// any other rescan action
+		console.log(`requeuing message for another check in ${scanRecheckTime} seconds`);
+		// requeue same message with an update on the current status as the latest status
+		await requeueMessage(eventAttrs,scanRecheckTime,JSON.stringify({...recordBody,previous_scan_status:currentStatus}),SCAN_CHECK_QUEUE_URL);
+	}
+	console.log('ongoingIterationHandling - END');
+}
+
+const firstIterationHandling = async (recordBody,eventAttrs) => {
+	const sandboxName = eventAttrs.sandboxName ? eventAttrs.sandboxName.stringValue : undefined;
+
+	const response = await getLagacyIDsFromName(eventAttrs.appName.stringValue,sandboxName);
+	console.log(response);
+	if (response.appLegacyID && response.appLegacyID.stringValue!=='0') {
+		eventAttrs.appLegacyID = response.appLegacyID;
+		eventAttrs.appGUID = response.appGUID;
+		eventAttrs.orgID = response.orgID;
+	} else {
+		console.log('Error - could not find application id');
+		return;
+	}
+	if (response.sandboxLegacyID) {
+		eventAttrs.sandboxLegacyID = response.sandboxLegacyID;
+		eventAttrs.sandboxGUID = response.sandboxGUID;
+	}
+
+	// report and create a new check-run
+	let sqsBaseMessage;
+	if (recordBody.github_event === 'push') { 
+		sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(recordBody);
+	} else if (recordBody.github_event === 'pull_request') {
+		sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(recordBody);
+		sqsBaseMessage.commit_sha = recordBody.pull_request.head.sha;
+	}
+
+	if (sqsBaseMessage && sqsBaseMessage !== null) {
+		const newCheckRun = await checkRun.createCheckRun(
+			sqsBaseMessage.repository_owner_login,
+			sqsBaseMessage.repository_name,
+			sqsBaseMessage.commit_sha
+		);
+		console.log('New check run requested');
+
+		if (newCheckRun) {
+			// Adding the check run id to the sqs attributes
+			eventAttrs.checkRunID = {
+				dataType: "Number",
+				stringValue: newCheckRun.data.id + ''
+			}
+			// requeue with lagacy ID
+			console.log(eventAttrs);
+
+			// re-queue with the lagacy ids;
+			await requeueMessage(eventAttrs,RECHECK_ACTION.SCANNING,JSON.stringify({/*...newCheckRun,*/...sqsBaseMessage,check_run_id:newCheckRun.data.id}),SCAN_CHECK_QUEUE_URL);
+			
+			console.log('Finish updating with lagacy ids and requeue for scan check');
+		} else {
+			console.error('Could not create check-run within GitHub - Abort further processing');
+			console.log(sqsBaseMessage);
+		}
+	} else {
+		console.log(`Un supported github event type: ${recordBody.github_event}`);
+	}
 }
 
 const calculateConclusion = (complianceStatus) => {
@@ -331,7 +334,6 @@ const getLagacyIDsFromName = async (appName,sandboxName) => {
 				stringValue: sandboxInfo.guid
 			};
 		}
-		// TODO - add sandbox referance
 	}
 
 	return retVal

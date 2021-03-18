@@ -4,44 +4,44 @@ const LABELS = {
     'severities':[
         {
             'name': 'Severity: Very High',
-            'color': 'f71297',
+            'color': 'A90533',
             'description': 'A Veracode Flaw, Very High severity',
             'severity': 5
         },
         {
             'name': 'Severity: High',
-            'color': 'd11141',
+            'color': 'DD3B35',
             'description': 'A Veracode Flaw, High severity',
             'severity': 4
         },
         {
             'name': 'Severity: Medium',
-            'color': 'f37735',
+            'color': 'FF7D00',
             'description': 'A Veracode Flaw, Medium severity',
             'severity': 3
         },
         {
             'name': 'Severity: Low',
-            'color': 'ffc425',
+            'color': 'FFBE00',
             'description': 'A Veracode Flaw, Low severity',
             'severity': 2
         },
         {
             'name': 'Severity: Very Low',
-            'color': '0057e7',
+            'color': '33ADD2',
             'description': 'A Veracode Flaw, Very Low severity',
             'severity': 1
         },
         {
             'name': 'Severity: Informational',
-            'color': '00b159',
+            'color': '0270D3',
             'description': 'A Veracode Flaw, Informational severity',
             'severity': 0
         }
     ],
     'veracode' : {
         'name': 'Veracode',
-        'color': '00b2e5',
+        'color': '0AA2DC',
         'description': 'A Veracode identified issue'
     }
 };

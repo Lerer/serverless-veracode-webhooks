@@ -83,7 +83,7 @@ To utilize the content, you will need to implement the following:
 3. Copy `empty.env` to `.env` and update the attributes
    - AWS_Region=`<Your AWS deployment region>`
    - AWS_Account_ID=`<Your AWS Account ID (Numeric)>`
-   - Stage=`<dev|prod>`
+   - Stage=`prod` (Unless you keen on extending the code in which case you can use `dev`)
 
 
 ### 3. AWS Policy for the deployment of the solution
@@ -188,12 +188,11 @@ We will do that by creating an Application in the GitHub account.
     ```
 
 ### 7. Deploy the solution to AWS 
-* Run the deployment command
-  * If you deploy in dev: __`npm run deploy-dev`__
-  * If you deploy as production: __`npm run deploy`__
+* Run the deployment command: __`npm run deploy`__
+  * If you want to extend the code, you can instead deploy as dev: __`npm run deploy-dev`__
 * Pay attenbtion to the deployment output for error
 * look for the `Service Information` section and note the `endpoint` which should look similar to: 
-  * `POST - https://kjhkjhz7l8.execute-api.ap-southeast-2.amazonaws.com/dev/github`
+  * `POST - https://kjhkjhz7l8.execute-api.ap-southeast-2.amazonaws.com/prod/github`
 
 ### 8. Configure Webhook
 To support further actions such as request to import findings, please update the GitHub application settings with the same Webhook URL you got from the `endpoint` URL collected at stage 7
@@ -235,7 +234,19 @@ Since the solution _act as_ asynchronic WebHook, we can send a full scan to the 
       ```
 
 # Done!!!
-> Test you workflows and scan your repositories
+<center><b>Test you workflows and scan your repositories</b></center>
 
 -------
-**Note** - To remove all resources deployed by this solution, simply run **`serverless remove`**
+## Uninstallation instructions:
+To remove all resources deployed by this solution, follow these steps
+- run from the terminal where you deployed the solution **`serverless remove`**
+- Remove the Github Application definition (from the [Developer settings of your Github account settings](https://github.com/settings/apps)
+- Update your repositories workflows to not call the solution by removing the `Invoke deployment hook` step action
+
+
+## Re-deployment
+If you decide to remove and redeploy the solution, you will receive a new API endpoint. To update your integration, please follow the steps:
+1. Update the Github application webhook URL with the new endpoint
+2. Update the Workflows to call the new URL
+
+__Note:__ Redeploying with the same stage in the same AWS region without previously removing the existing solution will only update the solution and will not cause a change in the endpoint URL 

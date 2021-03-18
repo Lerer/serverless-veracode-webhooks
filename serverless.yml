@@ -34,7 +34,7 @@ custom:
 
 provider:
   name: aws
-  stage: dev # default settings
+  stage: prod 
   runtime: nodejs12.x
   region: ap-southeast-2
   apiGateway:
