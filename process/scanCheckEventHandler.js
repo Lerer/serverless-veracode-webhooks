@@ -5,6 +5,8 @@ const buildSummaryHandler = require('../util/apis/veracode/buildSummary');
 
 const checkRun = require('../util/apis/github/checkRun');
 
+const jsonUtil = require('../util/helper/jsonUtil');
+
 const AWS = require('aws-sdk');
 
 const AWS_ACCOUNT = process.env.ACCOUNT_ID;
@@ -16,7 +18,7 @@ AWS.config.update({region: AWS_REGION});
 const RECHECK_ACTION = {
 	STOP : -1,
 	ERROR: -2,
-	SCANNING: 20,
+	SCANNING: 25,
 	FINISHED: -10,
 	AWAITING_POLICY_CALCULATION: 20,
 	LONGER_WAIT: 60,
@@ -28,14 +30,6 @@ var sqs = new AWS.SQS({apiVersion: '2012-11-05'});
 
 const SCAN_CHECK_QUEUE_URL = `https://sqs.${AWS_REGION}.amazonaws.com/${AWS_ACCOUNT}/ScanChecks`;
 
-/*
- handle ScanCheck event
- - iterate on the records captured:
-	- if no lagacy id - resolve and requeue
-	- if lagacy id exists - check scan status
-		- if scan still running - requeue for another check
-		- if scan done - finish
-*/
 const handleEvent = async (customEvent) => {
 	console.log('handleEvent - START');
     const records = customEvent.Records;
@@ -100,7 +94,7 @@ const ongoingIterationHandling = async (recordBody,eventAttrs) => {
 				conclusion: checkRun.CONCLUSION.SKIPPED,
 				output: {
 					summary: 'Issue with calculating recheck time. Bailing out!',
-					title: checkRunHandler.CHECK_RESULT_TITLE,
+					title: checkRun.CHECK_RESULT_TITLE,
 				//	text: parsedSummary.textMD
 				}
 			});
@@ -188,7 +182,7 @@ const ongoingIterationHandling = async (recordBody,eventAttrs) => {
 			console.log(`Status changed from ${recordBody.previous_scan_status} to ${buildInfo.analysis_unit['$'].status} - sending update`)
 
 			const reportingStatus = getGithubStatusFromBuildStatus(buildInfo);
-			const sandboxName = (eventAttrs.sandboxName && eventAttrs.sandboxName.stringValue) ? eventAttrs.sandboxName.stringValue : undefined;
+			const sandboxName = jsonUtil.getNested(eventAttrs,'sandboxName','stringValue');
 			await checkRun.updateCheckRun(
 				recordBody.repository_owner_login,
 				recordBody.repository_name,
@@ -214,10 +208,11 @@ const ongoingIterationHandling = async (recordBody,eventAttrs) => {
 }
 
 const firstIterationHandling = async (recordBody,eventAttrs) => {
-	const sandboxName = eventAttrs.sandboxName ? eventAttrs.sandboxName.stringValue : undefined;
+	const sandboxName = jsonUtil.getNested(eventAttrs,'sandboxName','stringValue');
 
 	const response = await getLagacyIDsFromName(eventAttrs.appName.stringValue,sandboxName);
 	console.log(response);
+
 	if (response.appLegacyID && response.appLegacyID.stringValue!=='0') {
 		eventAttrs.appLegacyID = response.appLegacyID;
 		eventAttrs.appGUID = response.appGUID;
@@ -233,13 +228,17 @@ const firstIterationHandling = async (recordBody,eventAttrs) => {
 
 	// report and create a new check-run
 	let sqsBaseMessage;
-	if (recordBody.github_event === 'push') { 
-		sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(recordBody);
-	} else if (recordBody.github_event === 'pull_request') {
-		sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(recordBody);
-		sqsBaseMessage.commit_sha = recordBody.pull_request.head.sha;
+	const githubRequestEventType = recordBody.github_event;
+	switch (githubRequestEventType) {
+		case 'push':
+			sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(recordBody);
+			break;
+		case 'pull_request':
+			sqsBaseMessage = checkRun.baseSQSMessageFromGithubEvent(recordBody);
+			sqsBaseMessage.commit_sha = recordBody.pull_request.head.sha;
+			break;
 	}
-
+	
 	if (sqsBaseMessage && sqsBaseMessage !== null) {
 		const newCheckRun = await checkRun.createCheckRun(
 			sqsBaseMessage.repository_owner_login,
@@ -258,7 +257,7 @@ const firstIterationHandling = async (recordBody,eventAttrs) => {
 			console.log(eventAttrs);
 
 			// re-queue with the lagacy ids;
-			await requeueMessage(eventAttrs,RECHECK_ACTION.SCANNING,JSON.stringify({/*...newCheckRun,*/...sqsBaseMessage,check_run_id:newCheckRun.data.id}),SCAN_CHECK_QUEUE_URL);
+			await requeueMessage(eventAttrs,RECHECK_ACTION.SCANNING,JSON.stringify({...sqsBaseMessage,check_run_id:newCheckRun.data.id}),SCAN_CHECK_QUEUE_URL);
 			
 			console.log('Finish updating with lagacy ids and requeue for scan check');
 		} else {
@@ -413,7 +412,7 @@ const getGithubStatusFromBuildStatus = (buildInfo) => {
 	const status = {
 		status: 'completed'
 	}
-	if (buildInfo && buildInfo.analysis_unit && buildInfo.analysis_unit['$']) {
+	if (jsonUtil.getNested(buildInfo,'analysis_unit','$')) {
 		const buildStatus = buildInfo.analysis_unit['$'].status;
 		switch (buildStatus) {
 			case buildInfoHandler.STATUS.RESULT_READY:
