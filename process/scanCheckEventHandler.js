@@ -100,64 +100,11 @@ const ongoingIterationHandling = async (recordBody,eventAttrs) => {
 			});
 	} else if (scanRecheckTime === RECHECK_ACTION.FINISHED) {
 
-		const appID = eventAttrs.appLegacyID.stringValue;
-		const orgID = eventAttrs.orgID.stringValue;
-		const appGUID = eventAttrs.appGUID.stringValue;
-		const sandboxGUID = eventAttrs.sandboxGUID ? eventAttrs.sandboxGUID.stringValue : undefined;
-
-		console.log('===  record body start on finish ===')
+		console.log('===  record body start on finish ===');
 		console.log(recordBody);
-		console.log('===  record body finish on finish ===')
-		// review compliance status
-		const complianceStatus = buildInfo['$'].policy_compliance_status;
-		// only update if needed
-		if (!recordBody.pre_calculated_updated || complianceStatus!==buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
-			const parsedSummary = await buildSummaryHandler.getParseBuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
+		console.log('===  record body finish on finish ===');
 
-			const conclusion = calculateConclusion(parsedSummary.summaryCompliance); 
-			console.log(`Current scan conclusion: '${conclusion}'`);
-			const checkRunFinished = await checkRun.updateCheckRun(
-				recordBody.repository_owner_login,
-				recordBody.repository_name,
-				recordBody.check_run_id,
-				{	
-					status: 'completed',
-					conclusion,
-					output: {
-						summary: parsedSummary.summaryMD,
-						title: checkRun.CHECK_RESULT_TITLE,
-						text: parsedSummary.textMD
-					}
-				});
-			console.log('Check run => updated with a complete status');
-			console.log(checkRunFinished);
-		}
-		// if policy is not calculated, requeue again
-		if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
-			await requeueMessage(
-				eventAttrs,
-				RECHECK_ACTION.AWAITING_POLICY_CALCULATION,
-				JSON.stringify({...recordBody,previous_scan_status:buildInfoHandler.STATUS.RESULT_READY,pre_calculated_updated: true}),
-				SCAN_CHECK_QUEUE_URL);
-			console.log('Scan check finish - Re-queue for recheck as policy is being calculated');
-		} else {
-			// Add import issues action
-			await checkRun.updateCheckRun(
-				recordBody.repository_owner_login,
-				recordBody.repository_name,
-				recordBody.check_run_id,
-				{
-					actions: [
-						{
-							label: 'Import Findings',
-							description: 'Import findings as repositories issues',
-							identifier: 'import_findings'
-						}
-					]
-				}
-			);
-			console.log('Scan check finish - no recheck is required');
-		}
+		await processScanFinished(eventAttrs,recordBody,buildInfo);
 
 	} else if (scanRecheckTime === RECHECK_ACTION.ERROR) {
 		console.log(`Error canculating recheck time - check the scan status message`);
@@ -179,7 +126,7 @@ const ongoingIterationHandling = async (recordBody,eventAttrs) => {
 		const currentStatus = buildInfo.analysis_unit['$'].status;
 		if (currentStatus !== recordBody.previous_scan_status) {
 			// Sending update to the Static check
-			console.log(`Status changed from ${recordBody.previous_scan_status} to ${buildInfo.analysis_unit['$'].status} - sending update`)
+			console.log(`Status changed from ${recordBody.previous_scan_status} to ${currentStatus} - sending update`)
 
 			const reportingStatus = getGithubStatusFromBuildStatus(buildInfo);
 			const sandboxName = jsonUtil.getNested(eventAttrs,'sandboxName','stringValue');
@@ -193,7 +140,7 @@ const ongoingIterationHandling = async (recordBody,eventAttrs) => {
 					output: {
 						title: checkRun.CHECK_RESULT_TITLE,
 						summary: getStatusChangeSummary(eventAttrs.appName.stringValue,sandboxName, eventAttrs.buildID.stringValue),//`Build ${eventAttrs.buildID.stringValue} submitted. Awaiting scan results.`,
-						text: `Veracode scan status update: ${buildInfo.analysis_unit['$'].status}`
+						text: `Veracode scan status update: ${currentStatus}`
 					}
 				});
 
@@ -266,6 +213,62 @@ const firstIterationHandling = async (recordBody,eventAttrs) => {
 		}
 	} else {
 		console.log(`Un supported github event type: ${recordBody.github_event}`);
+	}
+}
+
+const processScanFinished = async (eventAttrs,recordBody,buildInfo) => {
+	const appID = eventAttrs.appLegacyID.stringValue;
+	const orgID = eventAttrs.orgID.stringValue;
+	const appGUID = eventAttrs.appGUID.stringValue;
+	const sandboxGUID = jsonUtil.getNested(eventAttrs,'sandboxGUID','stringValue');
+	// review compliance status
+	const complianceStatus = buildInfo['$'].policy_compliance_status;
+	// only update if needed
+	if (!recordBody.pre_calculated_updated || complianceStatus!==buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
+		const parsedSummary = await buildSummaryHandler.getParseBuildSummary(orgID,appID,appGUID,sandboxGUID,eventAttrs.buildID.stringValue,buildInfo);
+
+		const conclusion = calculateConclusion(parsedSummary.summaryCompliance); 
+		console.log(`Current scan conclusion: '${conclusion}'`);
+		const checkRunFinished = await checkRun.updateCheckRun(
+			recordBody.repository_owner_login,
+			recordBody.repository_name,
+			recordBody.check_run_id,
+			{	
+				status: 'completed',
+				conclusion,
+				output: {
+					summary: parsedSummary.summaryMD,
+					title: checkRun.CHECK_RESULT_TITLE,
+					text: parsedSummary.textMD
+				}
+			});
+		console.log('Check run => updated with a complete status');
+		console.log(checkRunFinished);
+	}
+	// if policy is not calculated, requeue again
+	if (complianceStatus===buildSummaryHandler.POLICY_COMPLIANCE.CALCULATING) {
+		await requeueMessage(
+			eventAttrs,
+			RECHECK_ACTION.AWAITING_POLICY_CALCULATION,
+			JSON.stringify({...recordBody,previous_scan_status:buildInfoHandler.STATUS.RESULT_READY,pre_calculated_updated: true}),
+			SCAN_CHECK_QUEUE_URL);
+		console.log('Scan check finish - Re-queue for recheck as policy is being calculated');
+	} else {
+		// Add import issues action
+		await checkRun.updateCheckRun(
+			recordBody.repository_owner_login,
+			recordBody.repository_name,
+			recordBody.check_run_id,
+			{
+				actions: [
+					{
+						label: 'Import Findings',
+						description: 'Import findings as repositories issues',
+						identifier: 'import_findings'
+					}
+				]
+			}
+		);
 	}
 }
 
