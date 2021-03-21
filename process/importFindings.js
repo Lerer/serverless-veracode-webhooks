@@ -3,6 +3,7 @@ const findingsAPIHandler = require('../util/apis/veracode/findings');
 const githubLabelsHandler = require('../util/apis/github/labels')
 const githubIssuesHandler = require('../util/apis/github/issues');
 
+const jsonUtil = require('../util/helper/jsonUtil');
 
 const metadataRegex = /\n<!-- lerer = (.*) -->/
 const VID = 'vid';
@@ -14,13 +15,10 @@ const githubPageSize = findingsAPIHandler.findingsPageSize+10;
 const handleEvent = async (customEvent) => {
     console.log('Import Findings Event Handler - START');
     const records = customEvent.Records;
-	if (records.length>1) {
-		console.log('Got more than one message!!!');
-	}
 	for (let record of records) {
 		const recordBody = JSON.parse(record.body);
 		console.log(recordBody);
-		if (recordBody.github_event === 'check_run' && recordBody.check_run && recordBody.check_run.external_id) {
+		if (recordBody.github_event === 'check_run' && jsonUtil.getNested(recordBody,'check_run','external_id')) {
             const context = recordBody.check_run.external_id.split(':');
             if (context.length===3) {
                 let scanFindings = await getVeracodeFindings(context[0],context[1],context[2]);
@@ -32,9 +30,7 @@ const handleEvent = async (customEvent) => {
                     // gather existing open issues - to prevent duplication
                     const existingIssues = await collectExistingOpenIssues(owner,repo);
                     // If issues already exists, remove them from the findings
-                    if (existingIssues.length>0) {
-                        scanFindings = cleanExistingIssuesFromFindings(scanFindings,existingIssues);
-                    }
+                    scanFindings = cleanExistingIssuesFromFindings(scanFindings,existingIssues);
                     // process array for issue creation
                     const parsedFindingsArray = processFindings(scanFindings,owner,repo);
                     console.log(`parsed findings for creation: ${parsedFindingsArray.length}`);
@@ -205,9 +201,13 @@ const collectExistingOpenIssues  = async (owner,repo) => {
 }
 
 const cleanExistingIssuesFromFindings = (scanFindings,existingIssues) => {
-    return scanFindings.filter((finding) => {
-        return !existingIssues.includes(parseInt(finding.issue_id));
-    });
+    if (existingIssues && existingIssues.length>0) {
+        return scanFindings.filter((finding) => {
+            return !existingIssues.includes(parseInt(finding.issue_id));
+        });
+    } else {
+       return scanFindings; 
+    }
 }
 
 const createGithubIssues = async (owner,repo,parsedIssuesArray) => {
