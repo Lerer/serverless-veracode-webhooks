@@ -1,5 +1,7 @@
 'use strict';
 
+const jsonUtil = require('./util/helper/jsonUtil');
+
 const AWS = require('aws-sdk')
 
 const AWS_ACCOUNT = process.env.ACCOUNT_ID;
@@ -17,7 +19,7 @@ exports.webhookListen = (event,context,callback) => {
 	console.log(`BODY:\n${body}`);
     body.github_event = event.headers['x-github-event'] || event.headers['X-GitHub-Event'];
     console.log(`Event: ${body.github_event}`);
-    if (!body.repository || !body.repository.owner || (!body.data && body.github_event!=='check_run')) {
+    if (!jsonUtil.getNested(body,'repository','owner') || (!body.data && body.github_event!=='check_run')) {
 
 		return callback(null, {
 			headers: {
@@ -30,30 +32,14 @@ exports.webhookListen = (event,context,callback) => {
 	} 
 
     const msgAttrs = {
+		...enrichMessageAttrs(body.data),
 		"Origin": {
 			   DataType: "String",
 			   StringValue: "GitHub"
 		 }
 	};
 
-	if (body.data) {
-	
-		if (body.data.veracode_app_name) {
-			msgAttrs.appName = {
-					DataType: "String",
-					StringValue: body.data.veracode_app_name
-			};
-		}
-	
-		if (body.data.veracode_sandbox_name && body.data.veracode_sandbox_name.length >0) {
-			msgAttrs.sandboxName = {
-				DataType: "String",
-				StringValue: body.data.veracode_sandbox_name
-			}
-		}
-	}
-    
-    const params = {
+	const params = {
 		// Remove DelaySeconds parameter and value for FIFO queues
 	    //DelaySeconds: 5,
 	    MessageAttributes: msgAttrs,
@@ -62,7 +48,7 @@ exports.webhookListen = (event,context,callback) => {
     };
 
 	if (body.github_event==='check_run') {
-		if (body.requested_action && body.requested_action.identifier === 'import_findings') {
+		if (jsonUtil.getNested(body,'requested_action','identifier') === 'import_findings') {
 			params.QueueUrl = IMPORT_FINDINGS_QUEUE_URL;
 		} else {
 			console.log(`Error - unknown action identifier`);
@@ -99,6 +85,27 @@ exports.webhookListen = (event,context,callback) => {
 	  	};
 	   	callback(null,response);
 	});
+}
+
+
+const enrichMessageAttrs = (bodyData) => {
+	let enrichingData = {};
+	if (bodyData) {
+		if (bodyData.veracode_app_name) {
+			enrichingData.appName = {
+					DataType: "String",
+					StringValue: bodyData.veracode_app_name
+			};
+		}
+
+		if (bodyData.veracode_sandbox_name && bodyData.veracode_sandbox_name.length >0) {
+			enrichingData.sandboxName = {
+				DataType: "String",
+				StringValue: bodyData.veracode_sandbox_name
+			}
+		}
+	}
+	return enrichingData;
 }
 
 
