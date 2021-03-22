@@ -18,9 +18,9 @@ const getScanFindings = async (applicationGUID,sandboxGUID,buildId,page=1,pageSi
         if (sandboxGUID) {
             requestParameters.context = sandboxGUID;
         }
-        // if (buildId) {
-        //     requestParameters.build_id = buildId;
-        // }
+
+        // Handle build ID if needed for the specific 
+        // maybe requestParameters build_id should include buildId;
         const response = await apiUtil.request(
             'GET',
             'api.veracode.com',
