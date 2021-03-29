@@ -142,18 +142,13 @@ const parseSCASummary = (SCASummary) => {
 }
 
 const number2severity = (numStr) => {
-  if (numStr === 5) {
-    return 'Very High'
-  } else if (numStr === 4) {
-    return 'High'
-  } else if (numStr === 3) {
-    return 'Medium'
-  } else if (numStr === 2) {
-    return 'Low'
-  } else if (numStr === 1) {
-    return 'Very Low'
-  } else if (numStr === 0) {
-    return 'Informational'
+  switch (numStr) {
+    case 5: return 'Very High';
+    case 4: return 'High';
+    case 3: return 'Medium';
+    case 2: return 'Low';
+    case 1: return 'Very Low';
+    case 0: return 'Informational';
   }
 }
 
