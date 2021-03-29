@@ -1,8 +1,7 @@
 {
   "name": "scan-webhooks-for-veracode",
-  "version": "1.0.0",
-  "description": "A set of functions, queues, and other resources to support async webhooks of scan status from Veracode",
-  "main": "handler.js",
+  "version": "1.1.0",
+  "description": "An AWS deployment of functions, queues, and other resources to support async webhooks of scan status from Veracode",
   "dependencies": {
     "@octokit/auth-app": "^2.11.0",
     "@octokit/rest": "^18.3.5",
@@ -16,17 +15,15 @@
     "serverless-iam-roles-per-function": "^3.1.0"
   },
   "scripts": {
-    "test": "jest",
+    "test": "jest  --setupFiles dotenv/config --detectOpenHandles",
+    "emulate-slack": "node -r dotenv/config --trace-warnings test/slack.emulate.js",
     "deploy-dev": "sls deploy --stage dev --region ap-southeast-2",
     "deploy": "sls deploy --stage prod --region ap-southeast-2",
     "remove-dev": "serverless remove --stage dev",
     "remove": "serverless remove",
-    "test-app-list": "node -r dotenv/config test/test-hmac.js",
     "test-veracode-apis": "node -r dotenv/config --trace-warnings test/testVeracodeAPIs.js",
-    "test-oktokit": "node -r dotenv/config --trace-warnings test/testGithub.js",
     "log-queue-listener": "sls logs -f sqsHello -t",
-    "generate-permissions": "node -r dotenv/config --trace-warnings permissions/parsePermissions.js",
-    "tracking-exec-logs": "serverless logs -f veracodeForGithubBuildProcessor -t"
+    "generate-permissions": "node -r dotenv/config --trace-warnings permissions/parsePermissions.js"
   },
   "repository": {
     "type": "git",
